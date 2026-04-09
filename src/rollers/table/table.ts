@@ -8,10 +8,10 @@ import {
     type CachedMetadata
 } from "obsidian";
 
-import { TABLE_REGEX } from "src/utils/constants";
-import { StackRoller } from "../dice/stack";
-import { GenericFileRoller } from "../roller";
 import { API } from "src/api/api";
+import { GenericFileRoller } from "../roller";
+import { StackRoller } from "../dice/stack";
+import { TABLE_REGEX } from "src/utils/constants";
 import type { DiceRollerSettings } from "src/settings/settings.types";
 import type { LexicalToken } from "src/lexer/lexer";
 
@@ -21,15 +21,16 @@ class SubRollerResult {
 }
 
 export class TableRoller extends GenericFileRoller<string> {
-    content: string;
     block: string;
-    header: string;
-    rollsFormula: string;
-    isLookup: boolean = false;
-    lookupRoller: StackRoller;
-    lookupRanges: [range: [min: number, max: number], option: string][];
     combinedTooltip: string = "";
+    content: string;
+    header: string;
+    isLookup: boolean = false;
+    lookupRanges: [range: [min: number, max: number], option: string][];
+    lookupRoller: StackRoller;
     prettyTooltip: string = "";
+    rollsFormula: string;
+    result: string;
 
     constructor(
         data: DiceRollerSettings,
@@ -45,6 +46,7 @@ export class TableRoller extends GenericFileRoller<string> {
         }
         this.getPath();
     }
+
     getPath() {
         const { groups } = this.lexeme.value.match(TABLE_REGEX) ?? {};
 
@@ -68,13 +70,15 @@ export class TableRoller extends GenericFileRoller<string> {
             .toLowerCase();
         this.header = header;
     }
+
     getTooltip() {
         return this.prettyTooltip;
     }
+
     async getReplacer() {
         return this.result;
     }
-    result: string;
+
     getResultText(): string {
         const result = [this.result];
         if (this.data.displayResultsInline) {
@@ -82,6 +86,7 @@ export class TableRoller extends GenericFileRoller<string> {
         }
         return result.join("");
     }
+
     async build() {
         this.resultEl.empty();
         const result = [this.result];
@@ -282,25 +287,19 @@ export class TableRoller extends GenericFileRoller<string> {
         this.prettyTooltip = this.prettify(this.combinedTooltip);
         return res.join("||");
     }
+
     async roll(): Promise<string> {
         return new Promise(async (resolve) => {
-            if (this.loaded) {
+            let onLoad = async () => {
                 this.result = await this.getResult();
-
                 this.render();
-
                 this.trigger("new-result");
                 resolve(this.result);
+            };
+            if (this.loaded) {
+                await onLoad();
             } else {
-                this.once("loaded", async () => {
-                    this.result = await this.getResult();
-
-                    this.render();
-
-                    this.trigger("new-result");
-                    resolve(this.result);
-                });
-
+                this.once("loaded", onLoad);
                 this.load();
             }
         });
@@ -401,6 +400,7 @@ export class TableRoller extends GenericFileRoller<string> {
         }
     }
 }
+
 const MATCH = /^\|?([\s\S]+?)\|?$/;
 const SPLIT = /\|/g;
 
@@ -433,7 +433,9 @@ function extract(content: string) {
 
         for (let index in entries) {
             const entry = entries[index].trim();
-            if (!entry.length || !ret[index]) continue;
+            if (!entry.length || !ret[index]) {
+                continue;
+            }
             ret[index][1].push(entry);
         }
     }
