@@ -42,8 +42,6 @@ export class TableRoller extends GenericFileRoller<string> {
         public lookup?: string
     ) {
         super(data, original, lexeme, source, app, position);
-        if (lookup) {
-        }
         this.getPath();
     }
 
