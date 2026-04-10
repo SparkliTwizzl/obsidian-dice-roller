@@ -482,8 +482,7 @@ export default class DiceView extends ItemView {
                 }
 
                 if (unsupported) {
-                    new Notice(unsupportedMsg);
-                    return;
+                    throw new Error(unsupportedMsg);
                 }
 
                 // Build the combined result string from sub-rollers so the
