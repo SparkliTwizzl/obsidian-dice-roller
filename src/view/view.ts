@@ -281,6 +281,7 @@ export default class DiceView extends ItemView {
                 // the Dice Tray listener adding individual sub-roll entries.
                 const workspace: any = this.plugin.app.workspace as any;
                 const originalTrigger = workspace.trigger;
+                let unsupported = false;
                 try {
                     workspace.trigger = () => {};
 
@@ -293,11 +294,20 @@ export default class DiceView extends ItemView {
                             }
                             await (sub as StackRoller).roll(this.plugin.data.renderer);
                         } else {
-                            await sub.roll();
+                            // If any sub-roller is not a StackRoller, the whole
+                            // ChainRoller should be treated as unsupported for
+                            // the Dice Tray (match top-level non-StackRoller behavior).
+                            unsupported = true;
+                            break;
                         }
                     }
                 } finally {
                     workspace.trigger = originalTrigger;
+                }
+
+                if (unsupported) {
+                    new Notice(unsupportedMsg);
+                    return;
                 }
 
                 // Build the combined result string from sub-rollers so the
