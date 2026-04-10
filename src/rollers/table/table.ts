@@ -332,8 +332,7 @@ export class TableRoller extends GenericFileRoller<string> {
             let table = extract(this.content);
 
             /** Check for Lookup Table */
-            if (
-                /dice:\s*([\s\S]+)/.test(
+            if (/dice:\s*([\s\S]+)/.test(
                     Array.from(table.columns.keys())[0]
                 ) ||
                 this.lookup
