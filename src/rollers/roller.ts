@@ -18,6 +18,7 @@ import type {
 } from "src/settings/settings.types";
 import { Icons } from "src/utils/icons";
 import type { RenderableDice } from "./dice/renderable";
+import { CHAIN_RESULT_SEPARATOR } from "src/utils/constants";
 
 export interface ComponentLike {
     addChild(child: Component): void;
@@ -450,7 +451,7 @@ export class ChainRoller extends BasicRoller<string> {
                 console.error(e);
             }
         }
-        this.result = results.join(" ");
+        this.result = results.join(CHAIN_RESULT_SEPARATOR + " ");
         this.render();
         return this.result;
     }

@@ -14,7 +14,7 @@ import { ExpectedValue } from "../types/api";
 import { API } from "../api/api";
 import { type DiceIcon, IconManager } from "./view.icons";
 import { Icons } from "src/utils/icons";
-import { CHAIN_ROLL_DELIMITER } from "src/utils/constants";
+import { CHAIN_RESULT_SEPARATOR, CHAIN_ROLL_DELIMITER } from "src/utils/constants";
 import { nanoid } from "nanoid";
 import DiceTray from "./ui/DiceTray.svelte";
 import type { RenderableRoller } from "src/rollers/roller";
@@ -315,44 +315,6 @@ export default class DiceView extends ItemView {
                 this.setFormula();
             });
 
-        const formulaButtons = this.gridEl.createDiv("formula-buttons");
-
-        this.focusPreviousRollButton = new ExtraButtonComponent(formulaButtons)
-            .setIcon(Icons.PREVIOUS)
-            .setTooltip("Focus Previous Roll")
-            .onClick(() => {
-            });
-        this.focusPreviousRollButton.extraSettingsEl.addClass("dice-roller-focus-next");
-
-        this.focusNextRollButton = new ExtraButtonComponent(formulaButtons)
-            .setIcon(Icons.NEXT)
-            .setTooltip("Focus Next Roll")
-            .onClick(() => {
-            });
-        this.focusNextRollButton.extraSettingsEl.addClass("dice-roller-focus-next");
-
-        // Appends a chain delimiter to the active formula segment.
-        this.chainRollsButton = new ExtraButtonComponent(formulaButtons)
-            .setIcon(Icons.CHAIN)
-            .setTooltip("Chain Rolls")
-            .onClick(() => {
-                this.onClick_ChainRollsButton();
-            });
-        this.chainRollsButton.extraSettingsEl.addClass("dice-roller-chain");
-
-        this.combineRollsButton = new ExtraButtonComponent(formulaButtons)
-            .setIcon(Icons.COMBINE)
-            .setTooltip("Merge Selected Rolls")
-            .onClick(() => {
-            });
-
-        this.removeRollsButton = new ExtraButtonComponent(formulaButtons)
-            .setIcon(Icons.REMOVE)
-            .setTooltip("Remove Selected Rolls")
-            .onClick(() => {
-            });
-        this.removeRollsButton.extraSettingsEl.addClass("dice-roller-remove");
-
         new DiceTray({
             target: this.gridEl,
             props: {
@@ -414,26 +376,64 @@ export default class DiceView extends ItemView {
             console.error("DiceView: Failed to create text area input listener.")
         }
 
-        const actionButtons = this.formulaEl.createDiv("action-buttons");
+        const formulaButtons = this.formulaEl.createDiv("formula-buttons");
 
-        this.clearFormulaButton = new ExtraButtonComponent(actionButtons)
+        this.focusPreviousRollButton = new ExtraButtonComponent(formulaButtons)
+            .setIcon(Icons.PREVIOUS)
+            .setTooltip("Focus Previous Roll")
+            .onClick(() => {
+            });
+        this.focusPreviousRollButton.extraSettingsEl.addClass("dice-roller-focus-next");
+
+        this.focusNextRollButton = new ExtraButtonComponent(formulaButtons)
+            .setIcon(Icons.NEXT)
+            .setTooltip("Focus Next Roll")
+            .onClick(() => {
+            });
+        this.focusNextRollButton.extraSettingsEl.addClass("dice-roller-focus-next");
+
+        // Appends a chain delimiter to the active formula segment.
+        this.chainRollsButton = new ExtraButtonComponent(formulaButtons)
+            .setIcon(Icons.CHAIN)
+            .setTooltip("Chain Rolls")
+            .onClick(() => this.onClick_ChainRollsButton());
+        this.chainRollsButton.extraSettingsEl.addClass("dice-roller-chain");
+
+        this.combineRollsButton = new ExtraButtonComponent(formulaButtons)
+            .setIcon(Icons.COMBINE)
+            .setTooltip("Merge Selected Rolls")
+            .onClick(() => {
+            });
+
+        this.removeRollsButton = new ExtraButtonComponent(formulaButtons)
+            .setIcon(Icons.REMOVE)
+            .setTooltip("Remove Selected Rolls")
+            .onClick(() => {
+            });
+        this.removeRollsButton.extraSettingsEl.addClass("dice-roller-remove");
+
+        this.clearFormulaButton = new ExtraButtonComponent(formulaButtons)
             .setIcon(Icons.DELETE)
             .setTooltip("Clear Formula")
             .onClick(() => this.clear());
         this.clearFormulaButton.extraSettingsEl.addClass("dice-roller-clear");
 
-        this.saveButton = new ExtraButtonComponent(actionButtons)
+        this.saveButton = new ExtraButtonComponent(formulaButtons)
             .setIcon(Icons.SAVE)
             .setTooltip("Save Formula")
             .onClick(() => this.save());
         this.saveButton.extraSettingsEl.addClass("dice-roller-save");
 
-        this.rollButton = new ButtonComponent(actionButtons)
+        this.rollButton = new ButtonComponent(formulaButtons)
             .setIcon(Icons.DICE)
             .setCta()
             .setTooltip("Roll")
             .onClick(() => this.roll());
         this.rollButton.buttonEl.addClass("dice-roller-roll");
+    }
+
+    clear() {
+
     }
 
     get customFormulas() {
@@ -442,12 +442,11 @@ export default class DiceView extends ItemView {
 
     async display() {
         this.contentEl.empty();
-
         this.gridEl = this.contentEl.createDiv("dice-roller-grid");
         this.formulaEl = this.contentEl.createDiv("dice-roller-formula");
 
         const headerEl = this.contentEl.createDiv("results-header-container");
-        headerEl.createEl("h4", { cls: "results-header", text: "Results" });
+        headerEl.createEl("h3", { cls: "results-header", text: "Results" });
         new ExtraButtonComponent(headerEl.createDiv("clear-all"))
             .setIcon(Icons.DELETE)
             .setTooltip("Clear All")
@@ -573,7 +572,7 @@ export default class DiceView extends ItemView {
                     }
                 }
 
-                const resultValue = results.join(" ");
+                const resultValue = results.join(CHAIN_RESULT_SEPARATOR + " ");
                 // Mirror ChainRoller internal state so other callers can
                 // inspect `roller.result` if needed.
                 try {
