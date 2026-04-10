@@ -235,7 +235,16 @@ export class TableRoller extends GenericFileRoller<string> {
                     }
                     const rollsRoller = roller as StackRoller;
                     rollsRoller.addContexts(...this.components);
-                    await rollsRoller.roll();
+                    // Run the helper roll but prevent it from broadcasting an
+                    // event to the workspace (which would log to the Dice Tray).
+                    const workspace: any = this.app.workspace as any;
+                    const originalTrigger = workspace.trigger;
+                    try {
+                        workspace.trigger = () => {};
+                        await rollsRoller.roll();
+                    } finally {
+                        workspace.trigger = originalTrigger;
+                    }
                     this.rolls = rollsRoller.result;
                     if (!rollsRoller.isStatic) {
                         formula = formula.replace(
