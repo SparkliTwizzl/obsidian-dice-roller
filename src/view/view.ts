@@ -31,12 +31,12 @@ export interface ViewResult {
 
 export default class DiceView extends ItemView {
     activeSegmentIndex: number | null = null;
-    advButton: ButtonComponent;
+    advantageButton: ButtonComponent;
     chainRollsButton: ExtraButtonComponent;
     clearFormulaButton: ExtraButtonComponent;
     combineRollsButton: ExtraButtonComponent;
     custom = "";
-    disButton: ButtonComponent;
+    disadvantageButton: ButtonComponent;
     gridEl: HTMLDivElement;
     noResultsEl: HTMLSpanElement;
     focusNextRollButton: ExtraButtonComponent;
@@ -48,45 +48,85 @@ export default class DiceView extends ItemView {
     rollButton: ButtonComponent;
     saveButton: ExtraButtonComponent;
     stack: StackRoller;
+    #icons = IconManager;
+
+    formulaSegmentStates: Array<{
+        diceRollFormula: Map<DiceIcon, number>;
+        modifier: number;
+        hasAdvantage: boolean;
+        hasDisadvantage: boolean;
+    }> = [
+        { diceRollFormula: new Map(), modifier: 0, hasAdvantage: false, hasDisadvantage: false }
+    ];
 
     get customFormulas() {
         return this.plugin.data.customFormulas;
     }
 
-    // Per-segment state for chained formulas
-    segmentStates: Array<{
-        formula: Map<DiceIcon, number>;
-        add: number;
-        adv: boolean;
-        dis: boolean;
-    }> = [
-        { formula: new Map(), add: 0, adv: false, dis: false }
-    ];
-
-    #icons = IconManager;
-    getActiveState() {
-        const index = this.activeSegmentIndex ?? this.segmentStates.length - 1;
-        if (index < 0) return this.segmentStates[0];
-        if (index >= this.segmentStates.length) {
+    private getActiveState() {
+        const index = this.activeSegmentIndex ?? this.formulaSegmentStates.length - 1;
+        if (index < 0) return this.formulaSegmentStates[0];
+        if (index >= this.formulaSegmentStates.length) {
             // create missing states up to index
-            while (this.segmentStates.length <= index) {
-                this.segmentStates.push({ formula: new Map(), add: 0, adv: false, dis: false });
+            while (this.formulaSegmentStates.length <= index) {
+                this.formulaSegmentStates.push({ diceRollFormula: new Map(), modifier: 0, hasAdvantage: false, hasDisadvantage: false });
             }
         }
-        return this.segmentStates[index];
+        return this.formulaSegmentStates[index];
     }
 
-    updateAdvDisButtons() {
-        const state = this.getActiveState();
-        if (state.adv) {
-            this.advButton.setCta();
-        } else {
-            this.advButton.removeCta();
+    private onClick_ChainRollsButton() {
+        const ta = this.formulaComponent?.inputEl as HTMLTextAreaElement;
+        if (!ta) return;
+
+
+        if (!ta.value.includes(CHAIN_ROLL_DELIMITER)) {
+            ta.value = ta.value.trimEnd() + CHAIN_ROLL_DELIMITER + " ";
+            this.formulaSegmentStates.push({ diceRollFormula: new Map(), modifier: 0, hasAdvantage: false, hasDisadvantage: false });
+            this.activeSegmentIndex = this.formulaSegmentStates.length - 1;
+            ta.focus();
+            ta.selectionStart = ta.selectionEnd = ta.value.length;
+            return;
         }
-        if (state.dis) {
-            this.disButton.setCta();
+
+        const start = ta.selectionStart ?? ta.value.length;
+        const end = ta.selectionEnd ?? start;
+        const before = ta.value.slice(0, start);
+        const after = ta.value.slice(end);
+        const insert = `${CHAIN_ROLL_DELIMITER} `;
+        const newValue = before + insert + after;
+        ta.value = newValue;
+        const position = before.length + insert.length;
+
+        // compute active index as number of delimiters before caret
+        const beforeSlice = newValue.slice(0, position);
+        const count = (beforeSlice.match(new RegExp(CHAIN_ROLL_DELIMITER, "g")) || []).length;
+
+        // ensure segment state exists at index 'count'
+        if (this.formulaSegmentStates.length <= count) {
+            while (this.formulaSegmentStates.length <= count) {
+                this.formulaSegmentStates.push({ diceRollFormula: new Map(), modifier: 0, hasAdvantage: false, hasDisadvantage: false });
+            }
         } else {
-            this.disButton.removeCta();
+            this.formulaSegmentStates.splice(count, 0, { diceRollFormula: new Map(), modifier: 0, hasAdvantage: false, hasDisadvantage: false });
+        }
+
+        this.activeSegmentIndex = count;
+        ta.focus();
+        ta.selectionStart = ta.selectionEnd = position;
+    }
+
+    private updateAdvDisButtonStates() {
+        const state = this.getActiveState();
+        if (state.hasAdvantage) {
+            this.advantageButton.setCta();
+        } else {
+            this.advantageButton.removeCta();
+        }
+        if (state.hasDisadvantage) {
+            this.disadvantageButton.setCta();
+        } else {
+            this.disadvantageButton.removeCta();
         }
     }
 
@@ -175,33 +215,34 @@ export default class DiceView extends ItemView {
                         return;
                     }
                     const state = this.getActiveState();
-                    if (!state.formula.has(icon)) {
-                        state.formula.set(icon, 0);
+                    if (!state.diceRollFormula.has(icon)) {
+                        state.diceRollFormula.set(icon, 0);
                     }
-                    let amount = state.formula.get(icon) ?? 0;
+                    let amount = state.diceRollFormula.get(icon) ?? 0;
                     amount += evt.getModifierState("Shift") ? -1 : 1;
-                    state.formula.set(icon, amount);
+                    state.diceRollFormula.set(icon, amount);
                     this.setFormula();
                 });
         }
 
         const activeState = this.getActiveState();
-        const advDis = this.gridEl.createDiv("advantage-disadvantage");
+        const rollModifiers = this.gridEl.createDiv("roll-modifiers");
 
-        new ExtraButtonComponent(advDis).setIcon(Icons.MINUS).onClick(() => {
-            const state = this.getActiveState();
-            state.add -= 1;
-            this.setFormula();
-        });
+        new ExtraButtonComponent(rollModifiers)
+            .setIcon(Icons.MINUS)
+                .onClick(() => {
+                const state = this.getActiveState();
+                state.modifier -= 1;
+                this.setFormula();
+            });
 
-        const adv = new ButtonComponent(advDis)
+        const adv = new ButtonComponent(rollModifiers)
             .setButtonText("ADV")
             .onClick(() => {
                 const state = this.getActiveState();
-                state.adv = !state.adv;
-                state.dis = false;
-
-                if (state.adv) {
+                state.hasAdvantage = !state.hasAdvantage;
+                state.hasDisadvantage = false;
+                if (state.hasAdvantage) {
                     adv.setCta();
                     dis.removeCta();
                 } else {
@@ -209,37 +250,37 @@ export default class DiceView extends ItemView {
                 }
                 this.setFormula();
             });
-        this.advButton = adv;
-        if (activeState.adv) {
+        this.advantageButton = adv;
+        if (activeState.hasAdvantage) {
             adv.setCta();
         }
 
-        const dis = new ButtonComponent(advDis)
+        const dis = new ButtonComponent(rollModifiers)
             .setButtonText("DIS")
             .onClick(() => {
                 const state = this.getActiveState();
-                state.dis = !state.dis;
-                state.adv = false;
-
-                if (state.dis) {
+                state.hasDisadvantage = !state.hasDisadvantage;
+                state.hasAdvantage = false;
+                if (state.hasDisadvantage) {
                     dis.setCta();
                     adv.removeCta();
                 } else {
                     dis.removeCta();
                 }
-
                 this.setFormula();
             });
-        this.disButton = dis;
-        if (activeState.dis) {
+        this.disadvantageButton = dis;
+        if (activeState.hasDisadvantage) {
             dis.setCta();
         }
 
-        new ExtraButtonComponent(advDis).setIcon(Icons.PLUS).onClick(() => {
-            const state = this.getActiveState();
-            state.add += 1;
-            this.setFormula();
-        });
+        new ExtraButtonComponent(rollModifiers)
+            .setIcon(Icons.PLUS)
+            .onClick(() => {
+                const state = this.getActiveState();
+                state.modifier += 1;
+                this.setFormula();
+            });
 
         const formulaButtons = this.gridEl.createDiv("formula-buttons");
 
@@ -247,7 +288,6 @@ export default class DiceView extends ItemView {
             .setIcon(Icons.PREVIOUS)
             .setTooltip("Focus Previous Roll")
             .onClick(() => {
-
             });
         this.focusPreviousRollButton.extraSettingsEl.addClass("dice-roller-focus-next");
 
@@ -255,53 +295,15 @@ export default class DiceView extends ItemView {
             .setIcon(Icons.NEXT)
             .setTooltip("Focus Next Roll")
             .onClick(() => {
-
             });
         this.focusNextRollButton.extraSettingsEl.addClass("dice-roller-focus-next");
 
-        // Chain button: Append a chain delimiter if there is only one segment, otherwise insert a delimiter at the caret.
+        // Appends a chain delimiter to the active formula segment.
         this.chainRollsButton = new ExtraButtonComponent(formulaButtons)
             .setIcon(Icons.CHAIN)
             .setTooltip("Chain Rolls")
             .onClick(() => {
-                const ta = this.formulaComponent?.inputEl as HTMLTextAreaElement;
-                if (!ta) return;
-
-                // If there is no delimiter yet, always append the delimiter at the end and create a new segment.
-                if (!ta.value.includes(CHAIN_ROLL_DELIMITER)) {
-                    ta.value = ta.value.trimEnd() + CHAIN_ROLL_DELIMITER + " ";
-                    this.segmentStates.push({ formula: new Map(), add: 0, adv: false, dis: false });
-                    this.activeSegmentIndex = this.segmentStates.length - 1;
-                    ta.focus();
-                    ta.selectionStart = ta.selectionEnd = ta.value.length;
-                    return;
-                }
-
-                const start = ta.selectionStart ?? ta.value.length;
-                const end = ta.selectionEnd ?? start;
-                const before = ta.value.slice(0, start);
-                const after = ta.value.slice(end);
-                const insert = `${CHAIN_ROLL_DELIMITER} `;
-                const newValue = before + insert + after;
-                ta.value = newValue;
-                const position = before.length + insert.length;
-
-                // compute active index as number of delimiters before caret
-                const beforeSlice = newValue.slice(0, position);
-                const count = (beforeSlice.match(new RegExp(CHAIN_ROLL_DELIMITER, "g")) || []).length;
-
-                // ensure segment state exists at index 'count'
-                if (this.segmentStates.length <= count) {
-                    while (this.segmentStates.length <= count) {
-                        this.segmentStates.push({ formula: new Map(), add: 0, adv: false, dis: false });
-                    }
-                } else {
-                    this.segmentStates.splice(count, 0, { formula: new Map(), add: 0, adv: false, dis: false });
-                }
-
-                this.activeSegmentIndex = count;
-                ta.focus();
-                ta.selectionStart = ta.selectionEnd = position;
+                this.onClick_ChainRollsButton();
             });
         this.chainRollsButton.extraSettingsEl.addClass("dice-roller-chain");
 
@@ -309,14 +311,12 @@ export default class DiceView extends ItemView {
             .setIcon(Icons.COMBINE)
             .setTooltip("Merge Selected Rolls")
             .onClick(() => {
-
             });
 
         this.removeRollsButton = new ExtraButtonComponent(formulaButtons)
             .setIcon(Icons.REMOVE)
             .setTooltip("Remove Selected Rolls")
             .onClick(() => {
-
             });
         this.removeRollsButton.extraSettingsEl.addClass("dice-roller-remove");
 
@@ -332,12 +332,12 @@ export default class DiceView extends ItemView {
 
     setFormula() {
         const state = this.getActiveState();
-        if (!state.formula.size && !state.add) {
+        if (!state.diceRollFormula.size && !state.modifier) {
             this.formulaComponent.inputEl.value = "";
             return;
         }
         const formula: { formula: string; max: number; sign: "+" | "-" }[] = [];
-        for (const [icon, amount] of state.formula) {
+        for (const [icon, amount] of state.diceRollFormula) {
             if (!amount) continue;
             const sign = amount < 0 ? "-" : "+";
             const diceFormula = /^(?:1)?d(\d|%|F)+$/.test(icon.formula)
@@ -362,9 +362,9 @@ export default class DiceView extends ItemView {
             }
             let mod = "";
             if (index === 0) {
-                if (state.adv) {
+                if (state.hasAdvantage) {
                     mod = "kh";
-                } else if (state.dis) {
+                } else if (state.hasDisadvantage) {
                     mod = "kl";
                 }
                 instance.formula = instance.formula.replace(
@@ -374,11 +374,11 @@ export default class DiceView extends ItemView {
             }
             str.push(`${instance.formula}`);
         }
-        if (state.add !== 0) {
+        if (state.modifier !== 0) {
             if (str.length > 0) {
-                str.push(state.add > 0 ? "+" : "-");
+                str.push(state.modifier > 0 ? "+" : "-");
             }
-            str.push(`${Math.abs(state.add)}`);
+            str.push(`${Math.abs(state.modifier)}`);
         }
 
         const newSegment = str.join(" ");
@@ -527,7 +527,7 @@ export default class DiceView extends ItemView {
             this.rollButton.setDisabled(false);
             this.buildButtons();
             // After rolling, restore to a single empty segment to avoid index/overlap bugs.
-            this.segmentStates = [{ formula: new Map(), add: 0, adv: false, dis: false }];
+            this.formulaSegmentStates = [{ diceRollFormula: new Map(), modifier: 0, hasAdvantage: false, hasDisadvantage: false }];
             this.activeSegmentIndex = 0;
             this.setFormula();
         }
@@ -539,7 +539,7 @@ export default class DiceView extends ItemView {
             .setPlaceholder("Dice Formula")
             .onChange((v) => {
                 const st = this.getActiveState();
-                st.formula = new Map();
+                st.diceRollFormula = new Map();
             });
 
         // Track caret/selection to know which chained segment is active.
@@ -548,13 +548,13 @@ export default class DiceView extends ItemView {
             const updateActive = () => {
                 if (!ta) {
                     this.activeSegmentIndex = null;
-                        this.updateAdvDisButtons();
+                        this.updateAdvDisButtonStates();
                     return;
                 }
                 if (!ta.value.includes(CHAIN_ROLL_DELIMITER)) {
                     // single segment -> default to last (0)
                     this.activeSegmentIndex = 0;
-                        this.updateAdvDisButtons();
+                        this.updateAdvDisButtonStates();
                     return;
                 }
                 const selection = ta.selectionStart ?? ta.value.length;
@@ -572,7 +572,7 @@ export default class DiceView extends ItemView {
                     position = end + (CHAIN_ROLL_DELIMITER + " ").length;
                 }
                 this.activeSegmentIndex = activeIndex;
-                this.updateAdvDisButtons();
+                this.updateAdvDisButtonStates();
             };
 
             ta.addEventListener("click", updateActive);
