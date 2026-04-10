@@ -542,7 +542,7 @@ export default class DiceView extends ItemView {
                 st.diceRollFormula = new Map();
             });
 
-        // Track caret/selection to know which chained segment is active.
+        // Track caret/selection to know which formula segment is active.
         try {
             const ta = this.formulaComponent.inputEl as HTMLTextAreaElement;
             const updateActive = () => {
@@ -590,7 +590,6 @@ export default class DiceView extends ItemView {
             .setIcon(Icons.DELETE)
             .setTooltip("Clear Formula")
             .onClick(() => {
-
             });
         this.clearFormulaButton.extraSettingsEl.addClass("dice-roller-clear");
 
