@@ -1,4 +1,4 @@
-import { ArrayRoller, ErrorRoller, MultiRoller, type BasicRoller } from "../rollers/roller";
+import { ArrayRoller, MultiRoller, type BasicRoller } from "../rollers/roller";
 import { ButtonPosition, type DiceRollerSettings } from "../settings/settings.types";
 import { ExpectedValue, Round } from "../types/api";
 import { MULTI_ROLL_DELIMITER } from "src/utils/constants";
@@ -8,7 +8,6 @@ import { Lexer, type LexicalToken } from "../lexer/lexer";
 import { Notice, type App } from "obsidian";
 
 import { DataviewManager } from "./api.dataview";
-import { None, Some, type Option } from "@sniptt/monads";
 import { StackRoller } from "src/rollers/dice/stack";
 import { TableRoller } from "src/rollers/table/table";
 import { SectionRoller } from "src/rollers/section/section";
@@ -231,76 +230,74 @@ class APIInstance {
             lookup
         } = this.getParametersForRoller(raw, options);
 
-        // If multiple independent rolls are provided separated by top-level delimiters,
-        // evaluate them independently and display results sequentially.
-        const splitMultiRollFormula = (raw: string) => {
-            const parseMultiRollSegment = (raw: string) => {
-                let bracketStack: string[] = [];
-                let inSingleQuote = false;
-                let inDoubleQuote = false;
-                let buffer = "";
-                let remainder = "";
-    
-                for (let i = 0; i < raw.length; i++) {
-                    const ch = raw[i];
-                    if (ch === "'" && !inDoubleQuote) {
-                        inSingleQuote = !inSingleQuote;
-                    }
-                    else if (ch === '"' && !inSingleQuote) {
-                        inDoubleQuote = !inDoubleQuote;
-                    }
-                    else if (!inSingleQuote && !inDoubleQuote) {
-                        if (ch === "(" || ch === "[" || ch === "{") {
-                            bracketStack.push(ch);
-                        } else if (ch === ")") {
-                            if (bracketStack.length > 0 && bracketStack[bracketStack.length - 1] === "(") bracketStack.pop();
-                        } else if (ch === "]") {
-                            if (bracketStack.length > 0 && bracketStack[bracketStack.length - 1] === "[") bracketStack.pop();
-                        } else if (ch === "}") {
-                            if (bracketStack.length > 0 && bracketStack[bracketStack.length - 1] === "{") bracketStack.pop();
-                        } else if (ch === MULTI_ROLL_DELIMITER && bracketStack.length === 0) {
-                            remainder = raw.slice(i);
-                            break;
+        const parseMultiRollSegment = (raw: string) => {
+            let bracketStack: string[] = [];
+            let inSingleQuote = false;
+            let inDoubleQuote = false;
+            let buffer = "";
+            let remainder = "";
+
+            for (let i = 0; i < raw.length; i++) {
+                const ch = raw[i];
+                if (ch === "'" && !inDoubleQuote) {
+                    inSingleQuote = !inSingleQuote;
+                }
+                else if (ch === '"' && !inSingleQuote) {
+                    inDoubleQuote = !inDoubleQuote;
+                }
+                else if (!inSingleQuote && !inDoubleQuote) {
+                    if (ch === "(" || ch === "[" || ch === "{") {
+                        bracketStack.push(ch);
+                    } else if ((ch === ")" || ch === "]" || ch === "}") && bracketStack.length > 0) {
+                        const lastBracket = bracketStack[bracketStack.length - 1];
+                        if (lastBracket === "(" && ch === ")"
+                            || lastBracket === "[" && ch === "]"
+                            || lastBracket === "{" && ch === "}") {
+                                bracketStack.pop();
                         }
+                    } else if (ch === MULTI_ROLL_DELIMITER && bracketStack.length === 0) {
+                        remainder = raw.slice(i + 1);
+                        break;
                     }
-                    buffer += ch;
                 }
-    
-                if (bracketStack.length !== 0) {
-                    new Notice(`${buffer} is not a valid dice roll.`);
-                    return { part: "", remainder };
-                }
-    
-                return { contents: buffer, remainder };
+                buffer += ch;
             }
 
-            const parts: string[] = [];
+            buffer = buffer.trim();
+            return {
+                roll: buffer,
+                remainder
+            }
+        }
 
-            for (let buffer = ""; buffer.length > 0;) {
+        const splitMultiRollFormula = (raw: string) => {
+            const rolls: string[] = [];
+            let buffer = raw;
+            for (; buffer.length > 0;) {
                 const segment = parseMultiRollSegment(buffer);
-                if (segment.part !== "") {
-                    parts.push(segment.part);
+                if (segment.roll === "") {
+                    break;
                 }
+                rolls.push(segment.roll);
                 buffer = segment.remainder;
             }
-
-            return parts.map((p) => p.trim()).filter(Boolean);
+            return rolls.map((p) => p.trim()).filter(Boolean);
         };
 
-        if (content.includes(";") && splitMultiRollFormula(content).length > 1) {
-            const parts = splitMultiRollFormula(content);
-            const rollers: BasicRoller[] = [];
-
-            for (const part of parts) {
-                const r = this.getRoller(part, source, options);
-                if (!r) {
-                    new Notice(`${part} is not a valid dice roll.`);
-                    rollers.push(new ErrorRoller(this.data, content, "ERROR", position));
+        // If multiple independent rolls are provided separated by top-level delimiters,
+        // evaluate them independently and display results sequentially.
+        if (content.includes(MULTI_ROLL_DELIMITER) && splitMultiRollFormula(content).length > 1) {
+            const rolls = splitMultiRollFormula(content);
+            const childRollers: BasicRoller[] = [];
+            for (const roll of rolls) {
+                const roller = this.getRoller(roll, source, options);
+                if (!roller) {
+                    new Notice(`${roll} is not a valid dice roll.`)
+                    return null;
                 }
-                rollers.push(r);
+                childRollers.push(roller);
             }
-
-            return new MultiRoller(this.data, content, rollers, position);
+            return new MultiRoller(this.data, content, childRollers, position);
         }
 
         const lexemeResult = Lexer.parse(content);

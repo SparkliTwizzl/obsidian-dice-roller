@@ -456,28 +456,3 @@ export class MultiRoller extends BasicRoller<string> {
         return this.result ?? "";
     }
 }
-
-export class ErrorRoller extends BasicRoller<string> {
-    msg: string;
-    result: string;
-    constructor(data: DiceRollerSettings, original: string, msg: string, position = data.position) {
-        super(data, original, [] as any, position);
-        this.msg = msg;
-        this.result = msg;
-    }
-    async roll() {
-        this.result = "ERROR";
-        this.render();
-        return this.result;
-    }
-    async build() {
-        this.resultEl.empty();
-        this.resultEl.setText(this.result ?? "");
-    }
-    getTooltip() {
-        return this.msg;
-    }
-    async getReplacer() {
-        return this.result ?? this.msg;
-    }
-}

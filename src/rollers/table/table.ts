@@ -3,7 +3,6 @@ import {
     Component,
     MarkdownRenderer,
     Notice,
-    setIcon,
     TFile,
     type CachedMetadata
 } from "obsidian";
