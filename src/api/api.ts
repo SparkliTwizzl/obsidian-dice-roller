@@ -264,40 +264,35 @@ class APIInstance {
             }
 
             buffer = buffer.trim();
+            let roller = this.getRoller(buffer, source, options);
             return {
+                roller,
                 roll: buffer,
                 remainder
             }
         }
 
         const splitMultiRollFormula = (raw: string) => {
-            const rolls: string[] = [];
+            const rollers: BasicRoller[] = [];
             let buffer = raw;
             for (; buffer.length > 0;) {
                 const segment = parseMultiRollSegment(buffer);
-                if (segment.roll === "") {
-                    break;
+                if (!segment.roller) {
+                    new Notice(`${segment.roll} is not a valid dice roll.`)
+                    return null;
                 }
-                rolls.push(segment.roll);
+                rollers.push(segment.roller);
                 buffer = segment.remainder;
             }
-            return rolls.map((p) => p.trim()).filter(Boolean);
+            return rollers;
         };
 
         // If multiple independent rolls are provided separated by top-level delimiters,
         // evaluate them independently and display results sequentially.
         if (content.includes(MULTI_ROLL_DELIMITER) && splitMultiRollFormula(content).length > 1) {
-            const rolls = splitMultiRollFormula(content);
-            const childRollers: BasicRoller[] = [];
-            for (const roll of rolls) {
-                const roller = this.getRoller(roll, source, options);
-                if (!roller) {
-                    new Notice(`${roll} is not a valid dice roll.`)
-                    return null;
-                }
-                childRollers.push(roller);
-            }
-            return new MultiRoller(this.data, content, childRollers, position);
+            const rollers = splitMultiRollFormula(content);
+            console.log(rollers);
+            return new MultiRoller(this.data, content, rollers, position);
         }
 
         const lexemeResult = Lexer.parse(content);
