@@ -334,7 +334,7 @@ export class TableRoller extends GenericFileRoller<string> {
 
             /** Check for Lookup Table */
             if (
-                /dice:\s*([\s\S]+)\s*?/.test(
+                /dice:\s*([\s\S]+)/.test(
                     Array.from(table.columns.keys())[0]
                 ) ||
                 this.lookup
