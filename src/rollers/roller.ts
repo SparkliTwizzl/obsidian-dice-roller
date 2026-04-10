@@ -421,22 +421,22 @@ export class ArrayRoller<T = any> extends BareRoller<T> {
 }
 
 export class ChainRoller extends BasicRoller<string> {
-    childRollers: BasicRoller[];
+    subRollers: BasicRoller[];
     result: string;
 
     constructor(
         data: DiceRollerSettings,
         original: string,
-        childRollers: BasicRoller[],
+        subRollers: BasicRoller[],
         position = data.position
     ) {
         super(data, original, [] as any, position);
-        this.childRollers = childRollers;
+        this.subRollers = subRollers;
     }
 
     async roll() {
         const results: string[] = [];
-        for (const roller of this.childRollers) {
+        for (const roller of this.subRollers) {
             try {
                 await roller.roll();
                 const replacer = await roller.getReplacer?.();
@@ -461,7 +461,7 @@ export class ChainRoller extends BasicRoller<string> {
     }
 
     getTooltip() {
-        return this.childRollers.map((s) => s.getTooltip?.() ?? "").join("\n\n");
+        return this.subRollers.map((s) => s.getTooltip?.() ?? "").join("\n\n");
     }
 
     async getReplacer() {
