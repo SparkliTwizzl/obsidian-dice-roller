@@ -30,16 +30,23 @@ export interface ViewResult {
 }
 
 export default class DiceView extends ItemView {
+    activeSegmentIndex: number | null = null;
+    advButton?: ButtonComponent;
+    custom = "";
+    disButton?: ButtonComponent;
+    gridEl: HTMLDivElement;
     noResultsEl: HTMLSpanElement;
+    formulaComponent: TextAreaComponent;
+    formulaEl: HTMLDivElement;
+    resultEl: HTMLDivElement;
     rollButton: ButtonComponent;
     saveButton: ExtraButtonComponent;
     stack: StackRoller;
-    gridEl: HTMLDivElement;
-    formulaEl: HTMLDivElement;
+
     get customFormulas() {
         return this.plugin.data.customFormulas;
     }
-    custom = "";
+
     // Per-segment state for chained formulas
     segmentStates: Array<{
         formula: Map<DiceIcon, number>;
@@ -49,10 +56,6 @@ export default class DiceView extends ItemView {
     }> = [
         { formula: new Map(), add: 0, adv: false, dis: false }
     ];
-
-    formulaComponent: TextAreaComponent;
-    resultEl: HTMLDivElement;
-    activeSegmentIndex: number | null = null;
 
     #icons = IconManager;
     getActiveState() {
@@ -66,6 +69,25 @@ export default class DiceView extends ItemView {
         }
         return this.segmentStates[index];
     }
+
+    updateAdvDisButtons() {
+        const state = this.getActiveState();
+        if (this.advButton) {
+            if (state.adv) {
+                this.advButton.setCta();
+            } else {
+                this.advButton.removeCta();
+            }
+        }
+        if (this.disButton) {
+            if (state.dis) {
+                this.disButton.setCta();
+            } else {
+                this.disButton.removeCta();
+            }
+        }
+    }
+
     constructor(public plugin: DiceRollerPlugin, public leaf: WorkspaceLeaf) {
         super(leaf);
         this.contentEl.addClass("dice-roller-view");
@@ -184,9 +206,12 @@ export default class DiceView extends ItemView {
                 }
                 this.setFormula();
             });
+
+        this.advButton = adv;
         if (activeState.adv) {
             adv.setCta();
         }
+
         const dis = new ButtonComponent(advDis)
             .setButtonText("DIS")
             .onClick(() => {
@@ -204,16 +229,18 @@ export default class DiceView extends ItemView {
                 this.setFormula();
             });
 
+        this.disButton = dis;
         if (activeState.dis) {
             dis.setCta();
         }
+
         new ExtraButtonComponent(advDis).setIcon(Icons.PLUS).onClick(() => {
             const state = this.getActiveState();
             state.add += 1;
             this.setFormula();
         });
 
-        // Chain button: append delimiter if single segment, otherwise insert at caret
+        // Chain button: Append a chain delimiter if there is only one segment, otherwise insert a delimiter at the caret.
         new ExtraButtonComponent(advDis)
             .setIcon(Icons.EDIT)
             .setTooltip("Chain Formulas")
@@ -482,11 +509,13 @@ export default class DiceView extends ItemView {
             const updateActive = () => {
                 if (!ta) {
                     this.activeSegmentIndex = null;
+                        this.updateAdvDisButtons();
                     return;
                 }
                 if (!ta.value.includes(CHAIN_ROLL_DELIMITER)) {
                     // single segment -> default to last (0)
                     this.activeSegmentIndex = 0;
+                        this.updateAdvDisButtons();
                     return;
                 }
                 const selection = ta.selectionStart ?? ta.value.length;
@@ -504,6 +533,7 @@ export default class DiceView extends ItemView {
                     position = end + (CHAIN_ROLL_DELIMITER + " ").length;
                 }
                 this.activeSegmentIndex = activeIndex;
+                this.updateAdvDisButtons();
             };
 
             ta.addEventListener("click", updateActive);
