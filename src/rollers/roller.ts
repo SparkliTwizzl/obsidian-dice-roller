@@ -72,12 +72,14 @@ export abstract class Roller<T> extends Component implements Events {
         return Math.floor(rand * (max - min + 1)) + min;
     }
 }
+
 interface BareRoller<T> {
     on(name: "loaded", callback: () => void): EventRef;
     trigger(name: "loaded"): void;
     on(name: "new-result", callback: () => void): EventRef;
     trigger(name: "new-result"): void;
 }
+
 abstract class BareRoller<T> extends Roller<T> {
     constructor(
         public data: DiceRollerSettings,
@@ -258,6 +260,7 @@ export abstract class RenderableRoller<T = any> extends BasicRoller<T> {
         this.setTooltip();
     }
 }
+
 export abstract class GenericFileRoller<T> extends BasicRoller<T> {
     path: string;
     file: TFile;
@@ -381,6 +384,7 @@ export abstract class GenericEmbeddedRoller<T> extends GenericFileRoller<T> {
         setIcon(this.copy, Icons.COPY);
     }
 }
+
 export class ArrayRoller<T = any> extends BareRoller<T> {
     declare result: any;
     results: any[];
@@ -416,27 +420,32 @@ export class ArrayRoller<T = any> extends BareRoller<T> {
     }
 }
 
-export class MultiRoller extends BasicRoller<string> {
-    subs: BasicRoller[];
+export class ChainRoller extends BasicRoller<string> {
+    childRollers: BasicRoller[];
     result: string;
+
     constructor(
         data: DiceRollerSettings,
         original: string,
-        subs: BasicRoller[],
+        childRollers: BasicRoller[],
         position = data.position
     ) {
         super(data, original, [] as any, position);
-        this.subs = subs;
+        this.childRollers = childRollers;
     }
+
     async roll() {
         const results: string[] = [];
-        for (const s of this.subs) {
+        for (const roller of this.childRollers) {
             try {
-                await s.roll();
-                const rep = await s.getReplacer?.();
-                if (rep) results.push(rep.toString());
-                else if ((s as any).result !== undefined)
-                    results.push(String((s as any).result));
+                await roller.roll();
+                const replacer = await roller.getReplacer?.();
+                if (replacer) {
+                    results.push(replacer.toString());
+                }
+                else if ((roller as any).result !== undefined) {
+                    results.push(String((roller as any).result));
+                }
             } catch (e) {
                 console.error(e);
             }
@@ -445,13 +454,16 @@ export class MultiRoller extends BasicRoller<string> {
         this.render();
         return this.result;
     }
+
     async build() {
         this.resultEl.empty();
         this.resultEl.setText(this.result ?? "");
     }
+
     getTooltip() {
-        return this.subs.map((s) => s.getTooltip?.() ?? "").join("\n\n");
+        return this.childRollers.map((s) => s.getTooltip?.() ?? "").join("\n\n");
     }
+
     async getReplacer() {
         return this.result ?? "";
     }
