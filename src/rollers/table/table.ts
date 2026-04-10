@@ -288,16 +288,17 @@ export class TableRoller extends GenericFileRoller<string> {
 
     async roll(): Promise<string> {
         return new Promise(async (resolve) => {
-            let onLoad = async () => {
+            let performRoll = async () => {
                 this.result = await this.getResult();
                 this.render();
                 this.trigger("new-result");
                 resolve(this.result);
             };
+
             if (this.loaded) {
-                await onLoad();
+                await performRoll();
             } else {
-                this.once("loaded", onLoad);
+                this.once("loaded", performRoll);
                 this.load();
             }
         });
