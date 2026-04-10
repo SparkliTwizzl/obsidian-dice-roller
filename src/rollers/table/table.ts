@@ -306,8 +306,7 @@ export class TableRoller extends GenericFileRoller<string> {
     async getOptions(cache: CachedMetadata, data: string) {
         this.cache = cache;
 
-        if (
-            !this.cache ||
+        if (!this.cache ||
             !this.cache.blocks ||
             !(this.block in this.cache.blocks)
         ) {
