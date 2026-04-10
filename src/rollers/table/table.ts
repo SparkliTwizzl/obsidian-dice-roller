@@ -19,17 +19,24 @@ class SubRollerResult {
     combinedTooltip: string = "";
 }
 
+class Table {
+    columns: Map<string, string[]>;
+    rows: string[];
+}
+
 export class TableRoller extends GenericFileRoller<string> {
     block: string;
     combinedTooltip: string = "";
     content: string;
     header: string;
+    indirectRoller: TableRoller;
+    isIndirect: boolean = false;
     isLookup: boolean = false;
     lookupRanges: [range: [min: number, max: number], option: string][];
     lookupRoller: StackRoller;
     prettyTooltip: string = "";
-    rollsFormula: string;
     result: string;
+    rollsFormula: string;
 
     constructor(
         data: DiceRollerSettings,
@@ -42,6 +49,24 @@ export class TableRoller extends GenericFileRoller<string> {
     ) {
         super(data, original, lexeme, source, app, position);
         this.getPath();
+    }
+
+    private async getLookupRanges(table: Table) {
+        let lookupRanges = table.rows.map((row) => {
+            const [range, option] = row
+                .replace(/\\\|/g, "{ESCAPED_PIPE}")
+                .split("|")
+                .map((str) => str.replace(/{ESCAPED_PIPE}/g, "\\|"))
+                .map((s) => s.trim());
+
+            let [, min, max] = range.match(/(\d+)(?:[^\d]+?(\d+))?/) ?? [];
+            if (!min && !max) return;
+            return [
+                [Number(min), max ? Number(max) : undefined],
+                option
+            ];
+        }).filter(Boolean) as [range: [min: number, max: number], option: string][];
+        return lookupRanges;
     }
 
     getPath() {
@@ -247,6 +272,32 @@ export class TableRoller extends GenericFileRoller<string> {
                         }`.trim();
                     selectedOption = option[1];
                 }
+            } else if (this.isIndirect) {
+                const result = await this.indirectRoller.getResult();
+
+                // The indirect roller may return multiple results separated by '||'.
+                // Use the first returned value as the lookup key.
+                const parts = result
+                    .split("||")
+                    .map((p) => p.trim())
+                    .filter(Boolean);
+                const lookupKey = parts.length > 0 ? parts[0] : result.trim();
+
+                const numericKey = Number(lookupKey);
+                if (!Number.isNaN(numericKey) && this.lookupRanges) {
+                    const option = this.lookupRanges.find(
+                        ([range]) =>
+                            (range[1] === undefined && numericKey === range[0]) ||
+                            (numericKey >= range[0] && range[1] >= numericKey)
+                    );
+                    if (option) {
+                        subTooltip =
+                            this.indirectRoller.original.trim() +
+                            " --> " +
+                            `${result}${this.header ? " | " + this.header : ""}`.trim();
+                        selectedOption = option[1];
+                    }
+                }
             } else {
                 const options = [...this.options];
                 const randomRowNumber = this.getRandomBetween(
@@ -352,26 +403,12 @@ export class TableRoller extends GenericFileRoller<string> {
                     roller.addContexts(...this.components);
                     if (roller instanceof StackRoller) {
                         this.lookupRoller = roller;
-
-                        this.lookupRanges = table.rows.map((row) => {
-                            const [range, option] = row
-                                .replace(/\\\|/g, "{ESCAPED_PIPE}")
-                                .split("|")
-                                .map((str) =>
-                                    str.replace(/{ESCAPED_PIPE}/g, "\\|")
-                                )
-                                .map((s) => s.trim());
-
-                            let [, min, max] =
-                                range.match(/(\d+)(?:[^\d]+?(\d+))?/) ?? [];
-
-                            if (!min && !max) return;
-                            return [
-                                [Number(min), max ? Number(max) : undefined],
-                                option
-                            ];
-                        });
+                        this.lookupRanges = await this.getLookupRanges(table);
                         this.isLookup = true;
+                    } else if (roller instanceof TableRoller) {
+                        this.indirectRoller = roller;
+                        this.lookupRanges = await this.getLookupRanges(table);
+                        this.isIndirect = true;
                     }
                 }
             }
