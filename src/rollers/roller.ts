@@ -415,3 +415,69 @@ export class ArrayRoller<T = any> extends BareRoller<T> {
         super(data, ``);
     }
 }
+
+export class MultiRoller extends BasicRoller<string> {
+    subs: BasicRoller[];
+    result: string;
+    constructor(
+        data: DiceRollerSettings,
+        original: string,
+        subs: BasicRoller[],
+        position = data.position
+    ) {
+        super(data, original, [] as any, position);
+        this.subs = subs;
+    }
+    async roll() {
+        const results: string[] = [];
+        for (const s of this.subs) {
+            try {
+                await s.roll();
+                const rep = await s.getReplacer?.();
+                if (rep) results.push(rep.toString());
+                else if ((s as any).result !== undefined)
+                    results.push(String((s as any).result));
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        this.result = results.join(" ");
+        this.render();
+        return this.result;
+    }
+    async build() {
+        this.resultEl.empty();
+        this.resultEl.setText(this.result ?? "");
+    }
+    getTooltip() {
+        return this.subs.map((s) => s.getTooltip?.() ?? "").join("\n\n");
+    }
+    async getReplacer() {
+        return this.result ?? "";
+    }
+}
+
+export class ErrorRoller extends BasicRoller<string> {
+    msg: string;
+    result: string;
+    constructor(data: DiceRollerSettings, original: string, msg: string, position = data.position) {
+        super(data, original, [] as any, position);
+        this.msg = msg;
+        this.result = msg;
+    }
+    async roll() {
+        this.result = "ERROR";
+        this.render();
+        return this.result;
+    }
+    async build() {
+        this.resultEl.empty();
+        this.resultEl.setText(this.result ?? "");
+    }
+    getTooltip() {
+        return this.msg;
+    }
+    async getReplacer() {
+        return this.result ?? this.msg;
+    }
+}

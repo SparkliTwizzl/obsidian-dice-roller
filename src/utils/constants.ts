@@ -14,3 +14,5 @@ export const OMITTED_REGEX =
 
 export const CONDITIONAL_REGEX =
     /(?:(?<operator>=|=!|<|>|<=|>=|=<|=>|\-=|=\-)(?<comparer>\d+))/g;
+
+export const MULTI_ROLL_DELIMITER = ';';
