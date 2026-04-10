@@ -9,6 +9,7 @@ import {
 } from "obsidian";
 import type DiceRollerPlugin from "src/main";
 import { StackRoller } from "src/rollers/dice/stack";
+import { ChainRoller } from "src/rollers/roller";
 import { ExpectedValue } from "../types/api";
 import { API } from "../api/api";
 import { type DiceIcon, IconManager } from "./view.icons";
@@ -260,18 +261,80 @@ export default class DiceView extends ItemView {
         try {
             const roller = await API.getRoller(formula, VIEW_TYPE, opts);
             if (roller == null) return;
-            if (!(roller instanceof StackRoller)) {
-                throw new Error("The Dice Tray only supports dice rolls.");
+            let noDiceMsg = "No dice.";
+            let unsupportedMsg = "The Dice Tray only supports dice rolls.";
+            if (roller instanceof StackRoller) {
+                roller.iconEl.detach();
+                roller.containerEl.onclick = null;
+                roller.buildDiceTree();
+                if (!roller.children.length) {
+                    throw new Error(noDiceMsg);
+                }
+                await roller.roll(this.plugin.data.renderer).catch((e) => {
+                    throw e;
+                });
+            } else if (roller instanceof ChainRoller) {
+                roller.iconEl?.detach();
+                roller.containerEl.onclick = null;
+
+                // Suppress workspace triggers while running sub-rolls to avoid
+                // the Dice Tray listener adding individual sub-roll entries.
+                const workspace: any = this.plugin.app.workspace as any;
+                const originalTrigger = workspace.trigger;
+                try {
+                    workspace.trigger = () => {};
+
+                    // Execute each sub-roller. If a sub-roller is a StackRoller, render/roll it appropriately.
+                    for (const sub of roller.subRollers) {
+                        if (sub instanceof StackRoller) {
+                            (sub as StackRoller).buildDiceTree();
+                            if (!(sub as StackRoller).children.length) {
+                                throw new Error(noDiceMsg);
+                            }
+                            await (sub as StackRoller).roll(this.plugin.data.renderer);
+                        } else {
+                            await sub.roll();
+                        }
+                    }
+                } finally {
+                    workspace.trigger = originalTrigger;
+                }
+
+                // Build the combined result string from sub-rollers so the
+                // view entry contains the final chained result (matches
+                // ChainRoller.roll() behavior).
+                const results: string[] = [];
+                for (const sub of roller.subRollers) {
+                    try {
+                        const replacer = await sub.getReplacer?.();
+                        if (replacer) {
+                            results.push(String(replacer));
+                        } else if ((sub as any).result !== undefined) {
+                            results.push(String((sub as any).result));
+                        }
+                    } catch (e) {
+                        // Ignore individual sub errors when building display.
+                    }
+                }
+
+                const resultValue = results.join(" ");
+                // Mirror ChainRoller internal state so other callers can
+                // inspect `roller.result` if needed.
+                try {
+                    (roller as any).result = resultValue;
+                } catch (e) {}
+
+                const resultText = roller.getTooltip?.() ?? "";
+                await this.addResult({
+                    result: resultValue,
+                    original: roller.original,
+                    resultText: resultText,
+                    timestamp: new Date().valueOf(),
+                    id: nanoid(12)
+                });
+            } else {
+                throw new Error(unsupportedMsg);
             }
-            roller.iconEl.detach();
-            roller.containerEl.onclick = null;
-            roller.buildDiceTree();
-            if (!roller.children.length) {
-                throw new Error("No dice.");
-            }
-            await roller.roll(this.plugin.data.renderer).catch((e) => {
-                throw e;
-            });
         } catch (e: any) {
             new Notice("Invalid Formula: " + e.message);
         } finally {
