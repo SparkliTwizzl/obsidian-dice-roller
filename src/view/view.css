@@ -11,10 +11,12 @@
     z-index: 9999999;
     transition: opacity 1s ease-out;
 }
+
 .dice-roller-view .dice-roller-roll:disabled {
     cursor: not-allowed;
     opacity: 0.75;
 }
+
 /** Dice Roller View CSS */
 .workspace-split.mod-right-split .view-content.dice-roller-view {
     padding: 0.5rem;
@@ -38,11 +40,13 @@
     justify-content: center;
     width: fit-content;
 }
+
 .dice-roller-view .dice-roller-grid .dice-custom-formula-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
+
 .dice-roller-view .dice-roller-grid .dice-custom-formula {
     display: flex;
     justify-content: flex-start;
@@ -62,11 +66,17 @@
     display: grid;
     grid-template-columns: 1fr auto;
 }
+
 .dice-roller-view .dice-context .add-subtract {
     display: flex;
     align-items: center;
 }
-.dice-roller-view/*  .dice-context */ input, .dice-roller-view textarea {
+
+.dice-roller-view
+
+/*  .dice-context */
+input,
+.dice-roller-view textarea {
     width: 100%;
 }
 
@@ -76,7 +86,20 @@
     align-items: center;
     gap: 0.5rem;
 }
+
 .dice-roller-view .dice-roller-grid .advantage-disadvantage button {
+    margin: 0;
+    min-width: 66px;
+}
+
+.dice-roller-view .dice-roller-grid .formula-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.dice-roller-view .dice-roller-grid .formula-buttons button {
     margin: 0;
     min-width: 66px;
 }
@@ -96,7 +119,7 @@
 
 .dice-roller-view .dice-roller-formula button {
     margin-right: 0;
-    margin-left: 12px;
+    margin-left: 24px;
 }
 
 .dice-roller-view hr {
@@ -111,10 +134,8 @@
     width: 100%;
     border-bottom: 1px solid var(--background-modifier-border);
 }
-.dice-roller-view
-    .dice-roller-results-container
-    .dice-roller-results-header
-    h4 {
+
+.dice-roller-view .dice-roller-results-container .dice-roller-results-header h4 {
     margin: 0px;
 }
 
@@ -123,6 +144,7 @@
     flex-flow: column nowrap;
     gap: 6px;
 }
+
 .dice-roller-view .dice-roller-results .view-result {
     display: flex;
     flex-flow: column nowrap;
@@ -139,6 +161,7 @@
     right: 0;
     padding: 0.25rem;
 }
+
 .dice-roller-view .dice-roller-results .view-result .dice-result-reroll {
     position: absolute;
     top: 0;
@@ -150,6 +173,7 @@
 .dice-roller-view .dice-roller-results .view-result strong {
     font-size: x-large;
 }
+
 .dice-roller-view .dice-roller-results .view-result .result-context {
     align-self: flex-end;
     width: 100%;
@@ -159,15 +183,12 @@
     padding: 0.25rem;
     font-size: x-small;
 }
-.dice-roller-view
-    .dice-roller-results
-    .view-result
-    .result-context
-    .clickable-icon {
+
+.dice-roller-view .dice-roller-results .view-result .result-context .clickable-icon {
     margin-right: 0;
 }
 
-.dice-roller-view .dice-roller-results > span {
+.dice-roller-view .dice-roller-results>span {
     color: var(--text-muted);
     margin: 0 auto;
 }
@@ -183,6 +204,7 @@
     font-size: 200px;
     fill: currentColor;
 }
+
 .dice-button svg .shape {
     fill: none;
     stroke: currentColor;

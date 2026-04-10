@@ -6,15 +6,20 @@ export enum Icons {
     MINUS = "minus-square",
     PLUS = "plus-square",
 
-    SAVE = "save",
-    EDIT = "edit",
-    DONE = "checkmark",
     CANCEL = "cross",
-    RESET = "reset",
+    CHAIN = "link",
+    COMBINE = "merge",
     DELETE = "trash",
+    DONE = "checkmark",
+    EDIT = "edit",
+    NEXT = "arrow-big-right",
+    PREVIOUS = "arrow-big-left",
+    REMOVE = "delete",
+    RESET = "reset",
+    SAVE = "save",
 
-    SUBFOLDER = "folder-tree",
     PARENT_FOLDER = "folder-closed",
+    SUBFOLDER = "folder-tree",
 
     COLLAPSE = "chevron-right",
 

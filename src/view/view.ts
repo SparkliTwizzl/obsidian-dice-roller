@@ -31,13 +31,19 @@ export interface ViewResult {
 
 export default class DiceView extends ItemView {
     activeSegmentIndex: number | null = null;
-    advButton?: ButtonComponent;
+    advButton: ButtonComponent;
+    chainRollsButton: ExtraButtonComponent;
+    clearFormulaButton: ExtraButtonComponent;
+    combineRollsButton: ExtraButtonComponent;
     custom = "";
-    disButton?: ButtonComponent;
+    disButton: ButtonComponent;
     gridEl: HTMLDivElement;
     noResultsEl: HTMLSpanElement;
+    focusNextRollButton: ExtraButtonComponent;
+    focusPreviousRollButton: ExtraButtonComponent;
     formulaComponent: TextAreaComponent;
     formulaEl: HTMLDivElement;
+    removeRollsButton: ExtraButtonComponent;
     resultEl: HTMLDivElement;
     rollButton: ButtonComponent;
     saveButton: ExtraButtonComponent;
@@ -72,19 +78,15 @@ export default class DiceView extends ItemView {
 
     updateAdvDisButtons() {
         const state = this.getActiveState();
-        if (this.advButton) {
-            if (state.adv) {
-                this.advButton.setCta();
-            } else {
-                this.advButton.removeCta();
-            }
+        if (state.adv) {
+            this.advButton.setCta();
+        } else {
+            this.advButton.removeCta();
         }
-        if (this.disButton) {
-            if (state.dis) {
-                this.disButton.setCta();
-            } else {
-                this.disButton.removeCta();
-            }
+        if (state.dis) {
+            this.disButton.setCta();
+        } else {
+            this.disButton.removeCta();
         }
     }
 
@@ -162,11 +164,10 @@ export default class DiceView extends ItemView {
     buildButtons() {
         this.gridEl.empty();
 
-        const buttons = this.gridEl.createDiv("dice-buttons");
-        const activeState = this.getActiveState();
+        const diceButtons = this.gridEl.createDiv("dice-buttons");
         for (const icon of this.plugin.data.icons) {
             this.#icons.registerIcon(icon.id, icon.shape, icon.text);
-            new ExtraButtonComponent(buttons.createDiv("dice-button"))
+            new ExtraButtonComponent(diceButtons.createDiv("dice-button"))
                 .setIcon(icon.id)
                 .extraSettingsEl.onClickEvent((evt) => {
                     if (evt.type === "auxclick") {
@@ -184,6 +185,7 @@ export default class DiceView extends ItemView {
                 });
         }
 
+        const activeState = this.getActiveState();
         const advDis = this.gridEl.createDiv("advantage-disadvantage");
 
         new ExtraButtonComponent(advDis).setIcon(Icons.MINUS).onClick(() => {
@@ -191,6 +193,7 @@ export default class DiceView extends ItemView {
             state.add -= 1;
             this.setFormula();
         });
+
         const adv = new ButtonComponent(advDis)
             .setButtonText("ADV")
             .onClick(() => {
@@ -206,7 +209,6 @@ export default class DiceView extends ItemView {
                 }
                 this.setFormula();
             });
-
         this.advButton = adv;
         if (activeState.adv) {
             adv.setCta();
@@ -228,7 +230,6 @@ export default class DiceView extends ItemView {
 
                 this.setFormula();
             });
-
         this.disButton = dis;
         if (activeState.dis) {
             dis.setCta();
@@ -240,13 +241,32 @@ export default class DiceView extends ItemView {
             this.setFormula();
         });
 
+        const formulaButtons = this.gridEl.createDiv("formula-buttons");
+
+        this.focusPreviousRollButton = new ExtraButtonComponent(formulaButtons)
+            .setIcon(Icons.PREVIOUS)
+            .setTooltip("Focus Previous Roll")
+            .onClick(() => {
+
+            });
+        this.focusPreviousRollButton.extraSettingsEl.addClass("dice-roller-focus-next");
+
+        this.focusNextRollButton = new ExtraButtonComponent(formulaButtons)
+            .setIcon(Icons.NEXT)
+            .setTooltip("Focus Next Roll")
+            .onClick(() => {
+
+            });
+        this.focusNextRollButton.extraSettingsEl.addClass("dice-roller-focus-next");
+
         // Chain button: Append a chain delimiter if there is only one segment, otherwise insert a delimiter at the caret.
-        new ExtraButtonComponent(advDis)
-            .setIcon(Icons.EDIT)
-            .setTooltip("Chain Formulas")
+        this.chainRollsButton = new ExtraButtonComponent(formulaButtons)
+            .setIcon(Icons.CHAIN)
+            .setTooltip("Chain Rolls")
             .onClick(() => {
                 const ta = this.formulaComponent?.inputEl as HTMLTextAreaElement;
                 if (!ta) return;
+
                 // If there is no delimiter yet, always append the delimiter at the end and create a new segment.
                 if (!ta.value.includes(CHAIN_ROLL_DELIMITER)) {
                     ta.value = ta.value.trimEnd() + CHAIN_ROLL_DELIMITER + " ";
@@ -256,6 +276,7 @@ export default class DiceView extends ItemView {
                     ta.selectionStart = ta.selectionEnd = ta.value.length;
                     return;
                 }
+
                 const start = ta.selectionStart ?? ta.value.length;
                 const end = ta.selectionEnd ?? start;
                 const before = ta.value.slice(0, start);
@@ -277,10 +298,27 @@ export default class DiceView extends ItemView {
                 } else {
                     this.segmentStates.splice(count, 0, { formula: new Map(), add: 0, adv: false, dis: false });
                 }
+
                 this.activeSegmentIndex = count;
                 ta.focus();
                 ta.selectionStart = ta.selectionEnd = position;
             });
+        this.chainRollsButton.extraSettingsEl.addClass("dice-roller-chain");
+
+        this.combineRollsButton = new ExtraButtonComponent(formulaButtons)
+            .setIcon(Icons.COMBINE)
+            .setTooltip("Merge Selected Rolls")
+            .onClick(() => {
+
+            });
+
+        this.removeRollsButton = new ExtraButtonComponent(formulaButtons)
+            .setIcon(Icons.REMOVE)
+            .setTooltip("Remove Selected Rolls")
+            .onClick(() => {
+
+            });
+        this.removeRollsButton.extraSettingsEl.addClass("dice-roller-remove");
 
         new DiceTray({
             target: this.gridEl,
@@ -313,6 +351,7 @@ export default class DiceView extends ItemView {
             formula.push({ formula: diceFormula, max: roller.max, sign });
         }
         formula.sort((a, b) => b.max - a.max);
+
         const str: string[] = [];
         for (let index = 0; index < formula.length; index++) {
             const instance = formula[index];
@@ -546,11 +585,20 @@ export default class DiceView extends ItemView {
         }
 
         const buttons = this.formulaEl.createDiv("action-buttons");
+
+        this.clearFormulaButton = new ExtraButtonComponent(buttons)
+            .setIcon(Icons.DELETE)
+            .setTooltip("Clear Formula")
+            .onClick(() => {
+
+            });
+        this.clearFormulaButton.extraSettingsEl.addClass("dice-roller-clear");
+
         this.saveButton = new ExtraButtonComponent(buttons)
             .setIcon(Icons.SAVE)
             .setTooltip("Save Formula")
             .onClick(() => this.save());
-        this.saveButton.extraSettingsEl.addClass("dice-roller-roll");
+        this.saveButton.extraSettingsEl.addClass("dice-roller-save");
 
         this.rollButton = new ButtonComponent(buttons)
             .setIcon(Icons.DICE)
