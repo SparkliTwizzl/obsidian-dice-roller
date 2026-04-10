@@ -14,11 +14,10 @@ import { ExpectedValue } from "../types/api";
 import { API } from "../api/api";
 import { type DiceIcon, IconManager } from "./view.icons";
 import { Icons } from "src/utils/icons";
+import { CHAIN_ROLL_DELIMITER } from "src/utils/constants";
 import { nanoid } from "nanoid";
 import DiceTray from "./ui/DiceTray.svelte";
 import type { RenderableRoller } from "src/rollers/roller";
-
-/* import { Details } from "@javalent/utilities"; */
 
 export const VIEW_TYPE = "DICE_ROLLER_VIEW";
 
@@ -47,6 +46,7 @@ export default class DiceView extends ItemView {
 
     formulaComponent: TextAreaComponent;
     resultEl: HTMLDivElement;
+    activeSegmentIndex: number | null = null;
 
     #icons = IconManager;
     constructor(public plugin: DiceRollerPlugin, public leaf: WorkspaceLeaf) {
@@ -79,6 +79,7 @@ export default class DiceView extends ItemView {
             )
         );
     }
+
     async onOpen() {
         //build ui
 
@@ -117,6 +118,7 @@ export default class DiceView extends ItemView {
         this.buildButtons();
         this.buildFormula();
     }
+
     #formula: Map<DiceIcon, number> = new Map();
     buildButtons() {
         this.gridEl.empty();
@@ -188,6 +190,31 @@ export default class DiceView extends ItemView {
             this.setFormula();
         });
 
+        // Chain button: append delimiter if single segment, otherwise insert at caret
+        new ExtraButtonComponent(advDis)
+            .setIcon(Icons.EDIT)
+            .setTooltip("Chain Formulas")
+            .onClick(() => {
+                const ta = this.formulaComponent?.inputEl as HTMLTextAreaElement;
+                if (!ta) return;
+                // If there is no CHAIN_ROLL_DELIMITER yet, always append the delimiter at the end
+                if (!ta.value.includes(CHAIN_ROLL_DELIMITER)) {
+                    ta.value = ta.value.trimEnd() + CHAIN_ROLL_DELIMITER + " ";
+                    ta.focus();
+                    ta.selectionStart = ta.selectionEnd = ta.value.length;
+                    return;
+                }
+                const start = ta.selectionStart ?? ta.value.length;
+                const end = ta.selectionEnd ?? start;
+                const before = ta.value.slice(0, start);
+                const after = ta.value.slice(end);
+                const insert = `${CHAIN_ROLL_DELIMITER} `;
+                ta.value = before + insert + after;
+                const pos = before.length + insert.length;
+                ta.focus();
+                ta.selectionStart = ta.selectionEnd = pos;
+            });
+
         new DiceTray({
             target: this.gridEl,
             props: {
@@ -197,6 +224,7 @@ export default class DiceView extends ItemView {
             }
         });
     }
+
     setFormula() {
         if (!this.#formula.size && !this.#add) {
             this.formulaComponent.inputEl.value = "";
@@ -245,8 +273,49 @@ export default class DiceView extends ItemView {
             }
             str.push(`${Math.abs(this.#add)}`);
         }
-        this.formulaComponent.inputEl.value = str.join(" ");
+
+        const newSegment = str.join(" ");
+
+        const ta = this.formulaComponent?.inputEl as HTMLTextAreaElement;
+
+        if (ta && ta.value.includes(CHAIN_ROLL_DELIMITER)) {
+            const parts = ta.value.split(CHAIN_ROLL_DELIMITER).map((p) => p.trim());
+
+            let activeIndex = this.activeSegmentIndex;
+            if (activeIndex == null || activeIndex < 0 || activeIndex >= parts.length) {
+                const selection = ta.selectionStart ?? ta.value.length;
+                // determine active segment by caret position
+                let position = 0;
+                activeIndex = parts.length - 1;
+                for (let i = 0; i < parts.length; i++) {
+                    const part = parts[i];
+                    const start = position;
+                    const end = position + part.length;
+                    if (selection >= start && selection <= end) {
+                        activeIndex = i;
+                        break;
+                    }
+                    position = end + (CHAIN_ROLL_DELIMITER + " ").length; // move past delimiter + space
+                }
+            }
+
+            if (activeIndex < 0) activeIndex = 0;
+            if (activeIndex >= parts.length) activeIndex = parts.length - 1;
+
+            parts[activeIndex] = newSegment;
+            const joined = parts.filter((p) => p !== "").join(CHAIN_ROLL_DELIMITER + " ");
+            ta.value = joined;
+
+            const prefix = parts.slice(0, activeIndex).filter((p) => p !== "").join(CHAIN_ROLL_DELIMITER + " ");
+            const prefixLength = prefix ? prefix.length + (CHAIN_ROLL_DELIMITER + " ").length : 0;
+            const caret = prefixLength + parts[activeIndex].length;
+            ta.focus();
+            ta.selectionStart = ta.selectionEnd = caret;
+        } else {
+            this.formulaComponent.inputEl.value = newSegment;
+        }
     }
+
     async roll(formula = this.formulaComponent.inputEl.value) {
         if (!formula) {
             return;
@@ -355,11 +424,51 @@ export default class DiceView extends ItemView {
             this.setFormula();
         }
     }
+
     buildFormula() {
         this.formulaEl.empty();
         this.formulaComponent = new TextAreaComponent(this.formulaEl)
             .setPlaceholder("Dice Formula")
             .onChange((v) => (this.#formula = new Map()));
+
+        // Track caret/selection to know which chained segment is active.
+        try {
+            const ta = this.formulaComponent.inputEl as HTMLTextAreaElement;
+            const updateActive = () => {
+                if (!ta) {
+                    this.activeSegmentIndex = null;
+                    return;
+                }
+                if (!ta.value.includes(CHAIN_ROLL_DELIMITER)) {
+                    // single segment -> default to last (0)
+                    this.activeSegmentIndex = 0;
+                    return;
+                }
+                const selection = ta.selectionStart ?? ta.value.length;
+                const parts = ta.value.split(CHAIN_ROLL_DELIMITER).map((p) => p.trim());
+                let position = 0;
+                let activeIndex = parts.length - 1;
+                for (let i = 0; i < parts.length; i++) {
+                    const part = parts[i];
+                    const start = position;
+                    const end = position + part.length;
+                    if (selection >= start && selection <= end) {
+                        activeIndex = i;
+                        break;
+                    }
+                    position = end + (CHAIN_ROLL_DELIMITER + " ").length;
+                }
+                this.activeSegmentIndex = activeIndex;
+            };
+
+            ta.addEventListener("click", updateActive);
+            ta.addEventListener("keyup", updateActive);
+            ta.addEventListener("select", updateActive);
+            ta.addEventListener("focus", updateActive);
+            ta.addEventListener("input", updateActive);
+        } catch (e) {
+            console.error("DiceView: Failed to create text area input listener.")
+        }
 
         const buttons = this.formulaEl.createDiv("action-buttons");
         this.saveButton = new ExtraButtonComponent(buttons)
@@ -375,6 +484,7 @@ export default class DiceView extends ItemView {
             .onClick(() => this.roll());
         this.rollButton.buttonEl.addClass("dice-roller-roll");
     }
+
     save() {
         if (!this.formulaComponent.inputEl.value) return;
         this.plugin.data.customFormulas.push(
@@ -464,12 +574,15 @@ export default class DiceView extends ItemView {
     getDisplayText() {
         return "Dice Tray";
     }
+
     getViewType() {
         return VIEW_TYPE;
     }
+
     getIcon() {
         return Icons.DICE;
     }
+
     async onClose() {
         await super.onClose();
     }
