@@ -237,12 +237,18 @@ export default class DiceView extends ItemView {
                 const newValue = before + insert + after;
                 ta.value = newValue;
                 const position = before.length + insert.length;
+
                 // compute active index as number of delimiters before caret
                 const beforeSlice = newValue.slice(0, position);
                 const count = (beforeSlice.match(new RegExp(CHAIN_ROLL_DELIMITER, "g")) || []).length;
+
                 // ensure segment state exists at index 'count'
-                while (this.segmentStates.length <= count) {
-                    this.segmentStates.push({ formula: new Map(), add: 0, adv: false, dis: false });
+                if (this.segmentStates.length <= count) {
+                    while (this.segmentStates.length <= count) {
+                        this.segmentStates.push({ formula: new Map(), add: 0, adv: false, dis: false });
+                    }
+                } else {
+                    this.segmentStates.splice(count, 0, { formula: new Map(), add: 0, adv: false, dis: false });
                 }
                 this.activeSegmentIndex = count;
                 ta.focus();
@@ -454,9 +460,9 @@ export default class DiceView extends ItemView {
         } finally {
             this.rollButton.setDisabled(false);
             this.buildButtons();
-            // Reset segment states after rolling.
-            // TODO there's some bug here still, although it might be with active segment selection.
-            this.segmentStates = [];
+            // After rolling, restore to a single empty segment to avoid index/overlap bugs.
+            this.segmentStates = [{ formula: new Map(), add: 0, adv: false, dis: false }];
+            this.activeSegmentIndex = 0;
             this.setFormula();
         }
     }
