@@ -59,8 +59,81 @@ export default class DiceView extends ItemView {
         { diceRollFormula: new Map(), modifier: 0, hasAdvantage: false, hasDisadvantage: false }
     ];
 
-    get customFormulas() {
-        return this.plugin.data.customFormulas;
+    Formatter = new Intl.DateTimeFormat(
+        localStorage.getItem("language") ?? "en-US",
+        {
+            dateStyle: "medium",
+            timeStyle: "short"
+        }
+    );
+
+    private async addResult(result: ViewResult, save = true) {
+        if (this.noResultsEl) {
+            this.noResultsEl.detach();
+        }
+        const resultEl = createDiv("view-result");
+        const topPaneEl = resultEl.createDiv("result-actions");
+        const reroll = new ExtraButtonComponent(topPaneEl)
+            .setIcon(Icons.DICE)
+            .setTooltip("Roll Again")
+            .onClick(() => this.roll(result.original));
+        reroll.extraSettingsEl.addClass("dice-result-reroll");
+        topPaneEl.createSpan({
+            text: result.original
+        });
+
+        const copy = new ExtraButtonComponent(topPaneEl)
+            .setIcon(Icons.COPY)
+            .setTooltip("Copy Result")
+            .onClick(async () => {
+                await navigator.clipboard.writeText(`${result.resultText}`);
+            });
+        copy.extraSettingsEl.addClass("dice-content-copy");
+        if (Platform.isMobile) {
+            resultEl.createSpan({
+                cls: "dice-content-result",
+                text: `${result.resultText}`
+            });
+        }
+        resultEl.createEl("strong", {
+            attr: {
+                "aria-label": result.resultText
+            },
+            text: `${result.result}`
+        });
+
+        const context = resultEl.createDiv("result-context");
+
+        context.createEl("em", {
+            cls: "result-timestamp",
+            text: this.Formatter.format(result.timestamp)
+        });
+        new ExtraButtonComponent(context)
+            .setIcon(Icons.DELETE)
+            .onClick(async () => {
+                resultEl.detach();
+                if (this.resultEl.children.length === 0) {
+                    this.resultEl.prepend(this.noResultsEl);
+                }
+
+                this.plugin.data.viewResults.splice(
+                    this.plugin.data.viewResults.findIndex(
+                        (r) => r.id === result.id
+                    ),
+                    1
+                );
+                await this.plugin.saveSettings();
+            });
+
+        this.resultEl.prepend(resultEl);
+        if (save) {
+            this.plugin.data.viewResults.push(result);
+            this.plugin.data.viewResults = this.plugin.data.viewResults.slice(
+                0,
+                100
+            );
+            await this.plugin.saveSettings();
+        }
     }
 
     private getActiveState() {
@@ -161,46 +234,6 @@ export default class DiceView extends ItemView {
         );
     }
 
-    async onOpen() {
-        //build ui
-
-        this.display();
-    }
-
-    async display() {
-        this.contentEl.empty();
-
-        this.gridEl = this.contentEl.createDiv("dice-roller-grid");
-        this.formulaEl = this.contentEl.createDiv("dice-roller-formula");
-
-        const headerEl = this.contentEl.createDiv("results-header-container");
-        headerEl.createEl("h4", { cls: "results-header", text: "Results" });
-        new ExtraButtonComponent(headerEl.createDiv("clear-all"))
-            .setIcon(Icons.DELETE)
-            .setTooltip("Clear All")
-            .onClick(async () => {
-                this.resultEl.empty();
-                this.resultEl.append(this.noResultsEl);
-                this.plugin.data.viewResults = [];
-                await this.plugin.saveSettings();
-            });
-        const resultsEl = this.contentEl.createDiv(
-            "dice-roller-results-container"
-        );
-        this.resultEl = resultsEl.createDiv("dice-roller-results");
-        this.noResultsEl = this.resultEl.createSpan({
-            text: "No results yet! Roll some dice to get started :)"
-        });
-
-        for (const result of this.plugin.data.viewResults) {
-            this.addResult(result, false);
-        }
-
-        this.buildButtons();
-        this.buildFormula();
-    }
-
-    #formula: Map<DiceIcon, number> = new Map();
     buildButtons() {
         this.gridEl.empty();
 
@@ -330,6 +363,255 @@ export default class DiceView extends ItemView {
         });
     }
 
+    buildFormula() {
+        this.formulaEl.empty();
+        this.formulaComponent = new TextAreaComponent(this.formulaEl)
+            .setPlaceholder("Dice Formula")
+            .onChange((v) => {
+                const st = this.getActiveState();
+                st.diceRollFormula = new Map();
+            });
+
+        // Track caret/selection to know which formula segment is active.
+        try {
+            const ta = this.formulaComponent.inputEl as HTMLTextAreaElement;
+            const updateActive = () => {
+                if (!ta) {
+                    this.activeSegmentIndex = null;
+                        this.updateAdvDisButtonStates();
+                    return;
+                }
+                if (!ta.value.includes(CHAIN_ROLL_DELIMITER)) {
+                    // single segment -> default to last (0)
+                    this.activeSegmentIndex = 0;
+                        this.updateAdvDisButtonStates();
+                    return;
+                }
+                const selection = ta.selectionStart ?? ta.value.length;
+                const parts = ta.value.split(CHAIN_ROLL_DELIMITER).map((p) => p.trim());
+                let position = 0;
+                let activeIndex = parts.length - 1;
+                for (let i = 0; i < parts.length; i++) {
+                    const part = parts[i];
+                    const start = position;
+                    const end = position + part.length;
+                    if (selection >= start && selection <= end) {
+                        activeIndex = i;
+                        break;
+                    }
+                    position = end + (CHAIN_ROLL_DELIMITER + " ").length;
+                }
+                this.activeSegmentIndex = activeIndex;
+                this.updateAdvDisButtonStates();
+            };
+
+            ta.addEventListener("click", updateActive);
+            ta.addEventListener("keyup", updateActive);
+            ta.addEventListener("select", updateActive);
+            ta.addEventListener("focus", updateActive);
+            ta.addEventListener("input", updateActive);
+        } catch (e) {
+            console.error("DiceView: Failed to create text area input listener.")
+        }
+
+        const actionButtons = this.formulaEl.createDiv("action-buttons");
+
+        this.clearFormulaButton = new ExtraButtonComponent(actionButtons)
+            .setIcon(Icons.DELETE)
+            .setTooltip("Clear Formula")
+            .onClick(() => this.clear());
+        this.clearFormulaButton.extraSettingsEl.addClass("dice-roller-clear");
+
+        this.saveButton = new ExtraButtonComponent(actionButtons)
+            .setIcon(Icons.SAVE)
+            .setTooltip("Save Formula")
+            .onClick(() => this.save());
+        this.saveButton.extraSettingsEl.addClass("dice-roller-save");
+
+        this.rollButton = new ButtonComponent(actionButtons)
+            .setIcon(Icons.DICE)
+            .setCta()
+            .setTooltip("Roll")
+            .onClick(() => this.roll());
+        this.rollButton.buttonEl.addClass("dice-roller-roll");
+    }
+
+    get customFormulas() {
+        return this.plugin.data.customFormulas;
+    }
+
+    async display() {
+        this.contentEl.empty();
+
+        this.gridEl = this.contentEl.createDiv("dice-roller-grid");
+        this.formulaEl = this.contentEl.createDiv("dice-roller-formula");
+
+        const headerEl = this.contentEl.createDiv("results-header-container");
+        headerEl.createEl("h4", { cls: "results-header", text: "Results" });
+        new ExtraButtonComponent(headerEl.createDiv("clear-all"))
+            .setIcon(Icons.DELETE)
+            .setTooltip("Clear All")
+            .onClick(async () => {
+                this.resultEl.empty();
+                this.resultEl.append(this.noResultsEl);
+                this.plugin.data.viewResults = [];
+                await this.plugin.saveSettings();
+            });
+        const resultsEl = this.contentEl.createDiv(
+            "dice-roller-results-container"
+        );
+        this.resultEl = resultsEl.createDiv("dice-roller-results");
+        this.noResultsEl = this.resultEl.createSpan({
+            text: "No results yet! Roll some dice to get started :)"
+        });
+
+        for (const result of this.plugin.data.viewResults) {
+            this.addResult(result, false);
+        }
+
+        this.buildButtons();
+        this.buildFormula();
+    }
+
+    getDisplayText() {
+        return "Dice Tray";
+    }
+
+    getIcon() {
+        return Icons.DICE;
+    }
+
+    getViewType() {
+        return VIEW_TYPE;
+    }
+
+    async onClose() {
+        await super.onClose();
+    }
+
+    async onOpen() {
+        //build ui
+
+        this.display();
+    }
+
+    async roll(formula = this.formulaComponent.inputEl.value) {
+        if (!formula) {
+            return;
+        }
+        this.rollButton.setDisabled(true);
+        const opts = {
+            ...API.getRollerOptions(this.plugin.data)
+        };
+        if (opts.expectedValue == ExpectedValue.None) {
+            opts.expectedValue = ExpectedValue.Roll;
+        }
+        try {
+            const roller = await API.getRoller(formula, VIEW_TYPE, opts);
+            if (roller == null) return;
+            let noDiceMsg = "No dice.";
+            let unsupportedMsg = "The Dice Tray only supports dice rolls.";
+            if (roller instanceof StackRoller) {
+                roller.iconEl.detach();
+                roller.containerEl.onclick = null;
+                roller.buildDiceTree();
+                if (!roller.children.length) {
+                    throw new Error(noDiceMsg);
+                }
+                await roller.roll(this.plugin.data.renderer).catch((e) => {
+                    throw e;
+                });
+            } else if (roller instanceof ChainRoller) {
+                roller.iconEl?.detach();
+                roller.containerEl.onclick = null;
+
+                // Suppress workspace triggers while running sub-rolls to avoid
+                // the Dice Tray listener adding individual sub-roll entries.
+                const workspace: any = this.plugin.app.workspace as any;
+                const originalTrigger = workspace.trigger;
+                let unsupported = false;
+                try {
+                    workspace.trigger = () => {};
+
+                    // Execute each sub-roller. If a sub-roller is a StackRoller, render/roll it appropriately.
+                    for (const sub of roller.subRollers) {
+                        if (sub instanceof StackRoller) {
+                            (sub as StackRoller).buildDiceTree();
+                            if (!(sub as StackRoller).children.length) {
+                                throw new Error(noDiceMsg);
+                            }
+                            await (sub as StackRoller).roll(this.plugin.data.renderer);
+                        } else {
+                            // If any sub-roller is not a StackRoller, the whole
+                            // ChainRoller should be treated as unsupported for
+                            // the Dice Tray to match top-level non-StackRoller behavior.
+                            unsupported = true;
+                            break;
+                        }
+                    }
+                } finally {
+                    workspace.trigger = originalTrigger;
+                }
+                if (unsupported) {
+                    throw new Error(unsupportedMsg);
+                }
+
+                // Build the combined result string from sub-rollers so the
+                // view entry contains the final chained result, to match
+                // ChainRoller.roll() behavior.
+                const results: string[] = [];
+                for (const sub of roller.subRollers) {
+                    try {
+                        const replacer = await sub.getReplacer?.();
+                        if (replacer) {
+                            results.push(String(replacer));
+                        } else if ((sub as any).result !== undefined) {
+                            results.push(String((sub as any).result));
+                        }
+                    } catch (e) {
+                        // Ignore individual sub errors when building display.
+                    }
+                }
+
+                const resultValue = results.join(" ");
+                // Mirror ChainRoller internal state so other callers can
+                // inspect `roller.result` if needed.
+                try {
+                    (roller as any).result = resultValue;
+                } catch (e) {}
+
+                const resultText = roller.getTooltip?.() ?? "";
+                await this.addResult({
+                    result: resultValue,
+                    original: roller.original,
+                    resultText: resultText,
+                    timestamp: new Date().valueOf(),
+                    id: nanoid(12)
+                });
+            } else {
+                throw new Error(unsupportedMsg);
+            }
+        } catch (e: any) {
+            new Notice("Invalid Formula: " + e.message);
+        } finally {
+            this.rollButton.setDisabled(false);
+            this.buildButtons();
+            // After rolling, restore to a single empty segment to avoid index/overlap bugs.
+            this.formulaSegmentStates = [{ diceRollFormula: new Map(), modifier: 0, hasAdvantage: false, hasDisadvantage: false }];
+            this.activeSegmentIndex = 0;
+            this.setFormula();
+        }
+    }
+
+    save() {
+        if (!this.formulaComponent.inputEl.value) return;
+        this.plugin.data.customFormulas.push(
+            this.formulaComponent.inputEl.value
+        );
+        this.buildButtons();
+        this.plugin.saveSettings();
+    }
+
     setFormula() {
         const state = this.getActiveState();
         if (!state.diceRollFormula.size && !state.modifier) {
@@ -421,290 +703,5 @@ export default class DiceView extends ItemView {
         } else {
             this.formulaComponent.inputEl.value = newSegment;
         }
-    }
-
-    async roll(formula = this.formulaComponent.inputEl.value) {
-        if (!formula) {
-            return;
-        }
-        this.rollButton.setDisabled(true);
-        const opts = {
-            ...API.getRollerOptions(this.plugin.data)
-        };
-        if (opts.expectedValue == ExpectedValue.None) {
-            opts.expectedValue = ExpectedValue.Roll;
-        }
-        try {
-            const roller = await API.getRoller(formula, VIEW_TYPE, opts);
-            if (roller == null) return;
-            let noDiceMsg = "No dice.";
-            let unsupportedMsg = "The Dice Tray only supports dice rolls.";
-            if (roller instanceof StackRoller) {
-                roller.iconEl.detach();
-                roller.containerEl.onclick = null;
-                roller.buildDiceTree();
-                if (!roller.children.length) {
-                    throw new Error(noDiceMsg);
-                }
-                await roller.roll(this.plugin.data.renderer).catch((e) => {
-                    throw e;
-                });
-            } else if (roller instanceof ChainRoller) {
-                roller.iconEl?.detach();
-                roller.containerEl.onclick = null;
-
-                // Suppress workspace triggers while running sub-rolls to avoid
-                // the Dice Tray listener adding individual sub-roll entries.
-                const workspace: any = this.plugin.app.workspace as any;
-                const originalTrigger = workspace.trigger;
-                let unsupported = false;
-                try {
-                    workspace.trigger = () => {};
-
-                    // Execute each sub-roller. If a sub-roller is a StackRoller, render/roll it appropriately.
-                    for (const sub of roller.subRollers) {
-                        if (sub instanceof StackRoller) {
-                            (sub as StackRoller).buildDiceTree();
-                            if (!(sub as StackRoller).children.length) {
-                                throw new Error(noDiceMsg);
-                            }
-                            await (sub as StackRoller).roll(this.plugin.data.renderer);
-                        } else {
-                            // If any sub-roller is not a StackRoller, the whole
-                            // ChainRoller should be treated as unsupported for
-                            // the Dice Tray (match top-level non-StackRoller behavior).
-                            unsupported = true;
-                            break;
-                        }
-                    }
-                } finally {
-                    workspace.trigger = originalTrigger;
-                }
-
-                if (unsupported) {
-                    throw new Error(unsupportedMsg);
-                }
-
-                // Build the combined result string from sub-rollers so the
-                // view entry contains the final chained result (matches
-                // ChainRoller.roll() behavior).
-                const results: string[] = [];
-                for (const sub of roller.subRollers) {
-                    try {
-                        const replacer = await sub.getReplacer?.();
-                        if (replacer) {
-                            results.push(String(replacer));
-                        } else if ((sub as any).result !== undefined) {
-                            results.push(String((sub as any).result));
-                        }
-                    } catch (e) {
-                        // Ignore individual sub errors when building display.
-                    }
-                }
-
-                const resultValue = results.join(" ");
-                // Mirror ChainRoller internal state so other callers can
-                // inspect `roller.result` if needed.
-                try {
-                    (roller as any).result = resultValue;
-                } catch (e) {}
-
-                const resultText = roller.getTooltip?.() ?? "";
-                await this.addResult({
-                    result: resultValue,
-                    original: roller.original,
-                    resultText: resultText,
-                    timestamp: new Date().valueOf(),
-                    id: nanoid(12)
-                });
-            } else {
-                throw new Error(unsupportedMsg);
-            }
-        } catch (e: any) {
-            new Notice("Invalid Formula: " + e.message);
-        } finally {
-            this.rollButton.setDisabled(false);
-            this.buildButtons();
-            // After rolling, restore to a single empty segment to avoid index/overlap bugs.
-            this.formulaSegmentStates = [{ diceRollFormula: new Map(), modifier: 0, hasAdvantage: false, hasDisadvantage: false }];
-            this.activeSegmentIndex = 0;
-            this.setFormula();
-        }
-    }
-
-    buildFormula() {
-        this.formulaEl.empty();
-        this.formulaComponent = new TextAreaComponent(this.formulaEl)
-            .setPlaceholder("Dice Formula")
-            .onChange((v) => {
-                const st = this.getActiveState();
-                st.diceRollFormula = new Map();
-            });
-
-        // Track caret/selection to know which formula segment is active.
-        try {
-            const ta = this.formulaComponent.inputEl as HTMLTextAreaElement;
-            const updateActive = () => {
-                if (!ta) {
-                    this.activeSegmentIndex = null;
-                        this.updateAdvDisButtonStates();
-                    return;
-                }
-                if (!ta.value.includes(CHAIN_ROLL_DELIMITER)) {
-                    // single segment -> default to last (0)
-                    this.activeSegmentIndex = 0;
-                        this.updateAdvDisButtonStates();
-                    return;
-                }
-                const selection = ta.selectionStart ?? ta.value.length;
-                const parts = ta.value.split(CHAIN_ROLL_DELIMITER).map((p) => p.trim());
-                let position = 0;
-                let activeIndex = parts.length - 1;
-                for (let i = 0; i < parts.length; i++) {
-                    const part = parts[i];
-                    const start = position;
-                    const end = position + part.length;
-                    if (selection >= start && selection <= end) {
-                        activeIndex = i;
-                        break;
-                    }
-                    position = end + (CHAIN_ROLL_DELIMITER + " ").length;
-                }
-                this.activeSegmentIndex = activeIndex;
-                this.updateAdvDisButtonStates();
-            };
-
-            ta.addEventListener("click", updateActive);
-            ta.addEventListener("keyup", updateActive);
-            ta.addEventListener("select", updateActive);
-            ta.addEventListener("focus", updateActive);
-            ta.addEventListener("input", updateActive);
-        } catch (e) {
-            console.error("DiceView: Failed to create text area input listener.")
-        }
-
-        const buttons = this.formulaEl.createDiv("action-buttons");
-
-        this.clearFormulaButton = new ExtraButtonComponent(buttons)
-            .setIcon(Icons.DELETE)
-            .setTooltip("Clear Formula")
-            .onClick(() => {
-            });
-        this.clearFormulaButton.extraSettingsEl.addClass("dice-roller-clear");
-
-        this.saveButton = new ExtraButtonComponent(buttons)
-            .setIcon(Icons.SAVE)
-            .setTooltip("Save Formula")
-            .onClick(() => this.save());
-        this.saveButton.extraSettingsEl.addClass("dice-roller-save");
-
-        this.rollButton = new ButtonComponent(buttons)
-            .setIcon(Icons.DICE)
-            .setCta()
-            .setTooltip("Roll")
-            .onClick(() => this.roll());
-        this.rollButton.buttonEl.addClass("dice-roller-roll");
-    }
-
-    save() {
-        if (!this.formulaComponent.inputEl.value) return;
-        this.plugin.data.customFormulas.push(
-            this.formulaComponent.inputEl.value
-        );
-        this.buildButtons();
-        this.plugin.saveSettings();
-    }
-
-    Formatter = new Intl.DateTimeFormat(
-        localStorage.getItem("language") ?? "en-US",
-        {
-            dateStyle: "medium",
-            timeStyle: "short"
-        }
-    );
-
-    private async addResult(result: ViewResult, save = true) {
-        if (this.noResultsEl) {
-            this.noResultsEl.detach();
-        }
-        const resultEl = createDiv("view-result");
-        const topPaneEl = resultEl.createDiv("result-actions");
-        const reroll = new ExtraButtonComponent(topPaneEl)
-            .setIcon(Icons.DICE)
-            .setTooltip("Roll Again")
-            .onClick(() => this.roll(result.original));
-        reroll.extraSettingsEl.addClass("dice-result-reroll");
-        topPaneEl.createSpan({
-            text: result.original
-        });
-
-        const copy = new ExtraButtonComponent(topPaneEl)
-            .setIcon(Icons.COPY)
-            .setTooltip("Copy Result")
-            .onClick(async () => {
-                await navigator.clipboard.writeText(`${result.resultText}`);
-            });
-        copy.extraSettingsEl.addClass("dice-content-copy");
-        if (Platform.isMobile) {
-            resultEl.createSpan({
-                cls: "dice-content-result",
-                text: `${result.resultText}`
-            });
-        }
-        resultEl.createEl("strong", {
-            attr: {
-                "aria-label": result.resultText
-            },
-            text: `${result.result}`
-        });
-
-        const context = resultEl.createDiv("result-context");
-
-        context.createEl("em", {
-            cls: "result-timestamp",
-            text: this.Formatter.format(result.timestamp)
-        });
-        new ExtraButtonComponent(context)
-            .setIcon(Icons.DELETE)
-            .onClick(async () => {
-                resultEl.detach();
-                if (this.resultEl.children.length === 0) {
-                    this.resultEl.prepend(this.noResultsEl);
-                }
-
-                this.plugin.data.viewResults.splice(
-                    this.plugin.data.viewResults.findIndex(
-                        (r) => r.id === result.id
-                    ),
-                    1
-                );
-                await this.plugin.saveSettings();
-            });
-
-        this.resultEl.prepend(resultEl);
-        if (save) {
-            this.plugin.data.viewResults.push(result);
-            this.plugin.data.viewResults = this.plugin.data.viewResults.slice(
-                0,
-                100
-            );
-            await this.plugin.saveSettings();
-        }
-    }
-
-    getDisplayText() {
-        return "Dice Tray";
-    }
-
-    getViewType() {
-        return VIEW_TYPE;
-    }
-
-    getIcon() {
-        return Icons.DICE;
-    }
-
-    async onClose() {
-        await super.onClose();
     }
 }
