@@ -332,6 +332,9 @@ class ForceRoller extends NarrativeRoller {
 const NARRATIVE_FACES = ["g", "y", "b", "r", "p", "s", "w"] as const;
 type NarrativeFace = (typeof NARRATIVE_FACES)[number];
 export class NarrativeStackRoller extends RenderableRoller<NarrativeResult> {
+    children: NarrativeRoller[] = [];
+    result: NarrativeResult;
+
     constructor(
         public data: DiceRollerSettings,
         public original: string,
@@ -341,50 +344,47 @@ export class NarrativeStackRoller extends RenderableRoller<NarrativeResult> {
     ) {
         super(data, original, lexemes, position);
     }
-    children: NarrativeRoller[] = [];
-    getTooltip() {
-        let map = {
-            success: 0,
-            failure: 0,
-            advantage: 0,
-            threat: 0,
-            triumph: 0,
-            despair: 0,
-            light: 0,
-            dark: 0
-        };
 
-        for (const child of this.children) {
-            const die = child.toNarrativeResult();
+    async build(): Promise<void> {
+        this.resultEl.empty();
 
-            if (die.success > 0) {
-                map.success += die.success;
-            } else {
-                map.failure += die.success;
-            }
-            if (die.advantage > 0) {
-                map.advantage += die.advantage;
-            } else {
-                map.threat += die.advantage;
-            }
-            map.triumph += die.triumph;
-            map.despair += die.despair;
-            map.light += die.light;
-            map.dark += die.dark
-        }
-        return `**Totals**
-Successes: ${map.success}
-Failures: ${map.failure}
-Advantages: ${map.advantage}
-Threats: ${map.threat}
-Triumphs: ${map.triumph}
-Despairs: ${map.despair}
-${map.light > 0 ? `Light Side: ${map.light}` : ''}
-${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
+        this.resultEl.addClass("dice-roller-genesys");
+        this.resultEl.innerHTML = this.getResultText();
     }
+
+    calculate() {
+        this.result = this.children.reduce(
+            (a, b) => {
+                a.success += b.toNarrativeResult().success;
+                a.advantage += b.toNarrativeResult().advantage;
+                a.triumph += b.toNarrativeResult().triumph;
+                a.despair += b.toNarrativeResult().despair;
+                a.light += b.toNarrativeResult().light;
+                a.dark += b.toNarrativeResult().dark;
+                return a;
+            },
+            {
+                success: 0,
+                advantage: 0,
+                triumph: 0,
+                despair: 0,
+                light: 0,
+                dark: 0
+            }
+        );
+    }
+
     private formatSymbol(text: string, fontFamily: string): string {
         return `<span style="font-family: ${fontFamily}; font-weight: normal;">${text}</span>`;
     }
+
+    async getReplacer(): Promise<string> {
+        if (!this.result) {
+            this.rollSync();
+        }
+        return this.getResultText();
+    }
+
     getResultText(): string {
         const display = []; this.data.narrativeSymbolSet
         if (this.data.displayAsSymbols) {
@@ -439,6 +439,48 @@ ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
             return display.join(", ");
         }
     }
+
+    getTooltip() {
+        let map = {
+            success: 0,
+            failure: 0,
+            advantage: 0,
+            threat: 0,
+            triumph: 0,
+            despair: 0,
+            light: 0,
+            dark: 0
+        };
+
+        for (const child of this.children) {
+            const die = child.toNarrativeResult();
+
+            if (die.success > 0) {
+                map.success += die.success;
+            } else {
+                map.failure += die.success;
+            }
+            if (die.advantage > 0) {
+                map.advantage += die.advantage;
+            } else {
+                map.threat += die.advantage;
+            }
+            map.triumph += die.triumph;
+            map.despair += die.despair;
+            map.light += die.light;
+            map.dark += die.dark
+        }
+        return `**Totals**
+Successes: ${map.success}
+Failures: ${map.failure}
+Advantages: ${map.advantage}
+Threats: ${map.threat}
+Triumphs: ${map.triumph}
+Despairs: ${map.despair}
+${map.light > 0 ? `Light Side: ${map.light}` : ''}
+${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
+    }
+
     onload(): void {
         const map: Map<NarrativeFace, number> = new Map();
 
@@ -486,10 +528,7 @@ ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
         }
         super.onload();
     }
-    getReplacer(): Promise<string> {
-        throw new Error("Method not implemented.");
-    }
-    result: NarrativeResult;
+
     async roll(render?: boolean): Promise<NarrativeResult> {
         if (render || (this.shouldRender && this.hasRunOnce)) {
             await this.renderChildren();
@@ -505,6 +544,7 @@ ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
         this.render();
         return this.result;
     }
+
     rollSync() {
         for (const dice of this.children) {
             dice.rollSync();
@@ -516,34 +556,5 @@ ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
 
         this.render();
         return this.result;
-    }
-
-    calculate() {
-        this.result = this.children.reduce(
-            (a, b) => {
-                a.success += b.toNarrativeResult().success;
-                a.advantage += b.toNarrativeResult().advantage;
-                a.triumph += b.toNarrativeResult().triumph;
-                a.despair += b.toNarrativeResult().despair;
-                a.light += b.toNarrativeResult().light;
-                a.dark += b.toNarrativeResult().dark;
-                return a;
-            },
-            {
-                success: 0,
-                advantage: 0,
-                triumph: 0,
-                despair: 0,
-                light: 0,
-                dark: 0
-            }
-        );
-    }
-
-    async build(): Promise<void> {
-        this.resultEl.empty();
-
-        this.resultEl.addClass("dice-roller-genesys");
-        this.resultEl.innerHTML = this.getResultText();
     }
 }
