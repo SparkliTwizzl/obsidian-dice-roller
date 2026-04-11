@@ -272,13 +272,13 @@ export class ChainRoller extends BasicRoller<string> {
             workspace.trigger = originalTrigger;
         }
 
-        for (const sub of this.subRollers) {
+        for (const roller of this.subRollers) {
             try {
-                const replacer = await sub.getReplacer?.();
+                const replacer = await roller.getReplacer?.();
                 if (replacer) {
                     results.push(String(replacer));
-                } else if ((sub as any).result !== undefined) {
-                    results.push(String((sub as any).result));
+                } else if ((roller as any).result !== undefined) {
+                    results.push(String((roller as any).result));
                 }
             } catch (e) {
                 console.error(e);
