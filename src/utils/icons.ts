@@ -1,8 +1,7 @@
 export enum Icons {
+    ADD = "plus",
     CANCEL = "cross",
-    CHAIN = "link",
     COLLAPSE = "chevron-right",
-    COMBINE = "merge",
     COPY = "copy",
     DELETE = "trash",
     DICE = "dices",

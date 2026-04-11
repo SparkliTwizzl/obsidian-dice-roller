@@ -35,10 +35,9 @@ export interface ViewResult {
 
 export default class DiceView extends ItemView {
     activeSegmentIndex: number | null = null;
+    addRollButton: ExtraButtonComponent;
     advantageButton: ButtonComponent;
-    chainRollsButton: ExtraButtonComponent;
     clearFormulaButton: ExtraButtonComponent;
-    combineRollsButton: ExtraButtonComponent;
     custom = "";
     disadvantageButton: ButtonComponent;
     gridEl: HTMLDivElement;
@@ -47,7 +46,7 @@ export default class DiceView extends ItemView {
     focusPreviousRollButton: ExtraButtonComponent;
     formulaComponent: TextAreaComponent;
     formulaEl: HTMLDivElement;
-    removeRollsButton: ExtraButtonComponent;
+    removeRollButton: ExtraButtonComponent;
     resultEl: HTMLDivElement;
     rollButton: ButtonComponent;
     saveButton: ExtraButtonComponent;
@@ -382,39 +381,32 @@ export default class DiceView extends ItemView {
 
         const formulaButtons = this.formulaEl.createDiv("formula-buttons");
 
+        this.addRollButton = new ExtraButtonComponent(formulaButtons)
+            .setIcon(Icons.ADD)
+            .setTooltip("Add Another Roll")
+            .onClick(() => this.onClick_ChainRollsButton());
+        this.addRollButton.extraSettingsEl.addClass("dice-roller-add");
+
         this.focusPreviousRollButton = new ExtraButtonComponent(formulaButtons)
             .setIcon(Icons.PREVIOUS)
-            .setTooltip("Focus Previous Roll")
+            .setTooltip("Select Previous Roll")
             .onClick(() => {
             });
         this.focusPreviousRollButton.extraSettingsEl.addClass("dice-roller-focus-next");
 
         this.focusNextRollButton = new ExtraButtonComponent(formulaButtons)
             .setIcon(Icons.NEXT)
-            .setTooltip("Focus Next Roll")
+            .setTooltip("Select Next Roll")
             .onClick(() => {
             });
         this.focusNextRollButton.extraSettingsEl.addClass("dice-roller-focus-next");
 
-        // Appends a chain delimiter to the active formula segment.
-        this.chainRollsButton = new ExtraButtonComponent(formulaButtons)
-            .setIcon(Icons.CHAIN)
-            .setTooltip("Chain Rolls")
-            .onClick(() => this.onClick_ChainRollsButton());
-        this.chainRollsButton.extraSettingsEl.addClass("dice-roller-chain");
-
-        this.combineRollsButton = new ExtraButtonComponent(formulaButtons)
-            .setIcon(Icons.COMBINE)
-            .setTooltip("Merge Selected Rolls")
-            .onClick(() => {
-            });
-
-        this.removeRollsButton = new ExtraButtonComponent(formulaButtons)
+        this.removeRollButton = new ExtraButtonComponent(formulaButtons)
             .setIcon(Icons.REMOVE)
-            .setTooltip("Remove Selected Rolls")
+            .setTooltip("Remove Selected Roll")
             .onClick(() => {
             });
-        this.removeRollsButton.extraSettingsEl.addClass("dice-roller-remove");
+        this.removeRollButton.extraSettingsEl.addClass("dice-roller-remove");
 
         this.clearFormulaButton = new ExtraButtonComponent(formulaButtons)
             .setIcon(Icons.DELETE)
