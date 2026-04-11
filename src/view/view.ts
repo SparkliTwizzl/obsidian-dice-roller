@@ -206,6 +206,43 @@ export default class DiceView extends ItemView {
         return { ta, segments, startIndexes };
     }
 
+    private removeActiveFormulaSegment(): void {
+        if (this.formulaSegmentStates.length <= 1) {
+            this.clear();
+            return;
+        }
+
+        let activeIndex = this.activeSegmentIndex;
+        if (activeIndex == null || activeIndex < 0 || activeIndex >= this.formulaSegmentStates.length) {
+            activeIndex = this.formulaSegmentStates.length - 1;
+        }
+
+        // remove the corresponding state
+        this.formulaSegmentStates.splice(activeIndex, 1);
+
+        // update the textarea if it contains multiple segments
+        const data = this.getFormulaSegments();
+        if (data.ta) {
+            const { ta, segments } = data;
+            segments.splice(activeIndex, 1);
+            const joined = segments.filter((p) => p !== "").join(CHAIN_ROLL_DELIMITER + " ");
+            ta.value = joined;
+        }
+
+        if (this.formulaSegmentStates.length === 0) {
+            this.resetActiveSegment();
+            return;
+        }
+
+        if (activeIndex >= this.formulaSegmentStates.length) {
+            activeIndex = this.formulaSegmentStates.length - 1;
+        }
+        this.activeSegmentIndex = activeIndex;
+
+        // regenerate the visible formula from the active state
+        this.setFormula();
+    }
+
     private onClick_AddRollButton() {
         const ta = this.formulaComponent?.inputEl as HTMLTextAreaElement;
         if (!ta) return;
@@ -461,8 +498,7 @@ export default class DiceView extends ItemView {
         this.removeRollButton = new ExtraButtonComponent(formulaButtons)
             .setIcon(Icons.REMOVE)
             .setTooltip("Remove Selected Roll")
-            .onClick(() => {
-            });
+            .onClick(() => this.removeActiveFormulaSegment());
         this.removeRollButton.extraSettingsEl.addClass("dice-roller-remove");
 
         this.clearFormulaButton = new ExtraButtonComponent(formulaButtons)
