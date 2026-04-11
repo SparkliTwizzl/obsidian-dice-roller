@@ -167,6 +167,41 @@ abstract class BareRoller<T> extends Roller<T> {
     }
 }
 
+export class ArrayRoller<T = any> extends BareRoller<T> {
+    declare result: any;
+    results: any[];
+    getTooltip(): string {
+        return `${this.options.toString()}\n\n${this.results.toString()}`;
+    }
+    async roll() {
+        const options = [...this.options];
+
+        this.results = [...Array(this.rolls)]
+            .map(() => {
+                let option =
+                    options[this.getRandomBetween(0, options.length - 1)];
+                options.splice(options.indexOf(option), 1);
+                return option;
+            })
+            .filter((r) => r);
+        this.render();
+        this.trigger("new-result");
+        this.result = this.results[0];
+        return this.results[0];
+    }
+    async build() {
+        this.resultEl.empty();
+        this.resultEl.setText(this.results.toString());
+    }
+    constructor(
+        data: DiceRollerSettings,
+        public options: any[],
+        public rolls: number
+    ) {
+        super(data, ``);
+    }
+}
+
 export abstract class BasicRoller<T = any> extends BareRoller<T> {
     source: string;
     abstract getReplacer(): Promise<string>;
@@ -201,64 +236,52 @@ export abstract class BasicRoller<T = any> extends BareRoller<T> {
     }
 }
 
-export abstract class RenderableRoller<T = any> extends BasicRoller<T> {
-    shouldRender: boolean = false;
-    isRendering: boolean = false;
-    hasRunOnce: boolean = false;
-    override onunload(): void {
-        if (this.isRendering) {
-            DiceRenderer.stop();
-        }
-        super.onunload();
-    }
-    override async onClick(evt: MouseEvent) {
-        evt.stopPropagation();
-        evt.stopImmediatePropagation();
+export class ChainRoller extends BasicRoller<string> {
+    subRollers: BasicRoller[];
+    result: string;
 
-        if (this.isRendering) {
-            DiceRenderer.stop();
-        }
-        this.#controller?.abort();
-        if (evt.getModifierState("Shift")) {
-            await this.roll(true);
-            this.hasRunOnce = true;
-        } else if (window.getSelection()?.isCollapsed) {
-            await this.roll();
-        }
+    constructor(
+        data: DiceRollerSettings,
+        original: string,
+        subRollers: BasicRoller[],
+        position = data.position
+    ) {
+        super(data, original, [] as any, position);
+        this.subRollers = subRollers;
     }
 
-    abstract rollSync(): T;
-    abstract roll(render?: boolean): Promise<T>;
-    abstract getResultText(): string;
+    async build() {
+        this.resultEl.empty();
+        this.resultEl.setText(this.result ?? "");
+    }
 
-    children: RenderableDice<any>[];
-    #controller: AbortController;
-    async renderChildren(): Promise<void> {
-        this.isRendering = true;
-        this.setTooltip();
-        this.setSpinner();
-        const promises = [];
-        this.#controller = new AbortController();
-        for (const die of this.children) {
-            promises.push(
-                new Promise<void>(async (resolve, reject) => {
-                    this.#controller.signal.addEventListener("abort", () => {
-                        reject();
-                    });
-                    await die.render(this.#controller);
-                    resolve();
-                })
-            );
+    async getReplacer() {
+        return this.result ?? "";
+    }
+
+    getTooltip() {
+        return this.subRollers.map((s) => s.getTooltip?.() ?? "").join("\n\n");
+    }
+
+    async roll() {
+        const results: string[] = [];
+        for (const roller of this.subRollers) {
+            try {
+                await roller.roll();
+                const replacer = await roller.getReplacer?.();
+                if (replacer) {
+                    results.push(replacer.toString());
+                }
+                else if ((roller as any).result !== undefined) {
+                    results.push(String((roller as any).result));
+                }
+            } catch (e) {
+                console.error(e);
+            }
         }
-        try {
-            await Promise.all(promises);
-        } catch (e) {
-            return;
-        }
-
-        this.isRendering = false;
-
-        this.setTooltip();
+        this.result = results.join(CHAIN_RESULT_SEPARATOR + " ");
+        this.render();
+        return this.result;
     }
 }
 
@@ -349,6 +372,67 @@ export abstract class GenericFileRoller<T> extends BasicRoller<T> {
     abstract getOptions(cache: CachedMetadata, data: string): Promise<void>;
 }
 
+export abstract class RenderableRoller<T = any> extends BasicRoller<T> {
+    shouldRender: boolean = false;
+    isRendering: boolean = false;
+    hasRunOnce: boolean = false;
+    override onunload(): void {
+        if (this.isRendering) {
+            DiceRenderer.stop();
+        }
+        super.onunload();
+    }
+    override async onClick(evt: MouseEvent) {
+        evt.stopPropagation();
+        evt.stopImmediatePropagation();
+
+        if (this.isRendering) {
+            DiceRenderer.stop();
+        }
+        this.#controller?.abort();
+        if (evt.getModifierState("Shift")) {
+            await this.roll(true);
+            this.hasRunOnce = true;
+        } else if (window.getSelection()?.isCollapsed) {
+            await this.roll();
+        }
+    }
+
+    abstract rollSync(): T;
+    abstract roll(render?: boolean): Promise<T>;
+    abstract getResultText(): string;
+
+    children: RenderableDice<any>[];
+    #controller: AbortController;
+    async renderChildren(): Promise<void> {
+        this.isRendering = true;
+        this.setTooltip();
+        this.setSpinner();
+        const promises = [];
+        this.#controller = new AbortController();
+        for (const die of this.children) {
+            promises.push(
+                new Promise<void>(async (resolve, reject) => {
+                    this.#controller.signal.addEventListener("abort", () => {
+                        reject();
+                    });
+                    await die.render(this.#controller);
+                    resolve();
+                })
+            );
+        }
+        try {
+            await Promise.all(promises);
+        } catch (e) {
+            return;
+        }
+
+        this.isRendering = false;
+
+        this.setTooltip();
+    }
+}
+
 export abstract class GenericEmbeddedRoller<T> extends GenericFileRoller<T> {
     copy: HTMLDivElement;
     abstract transformResultsToString(): string;
@@ -383,89 +467,5 @@ export abstract class GenericEmbeddedRoller<T> extends GenericFileRoller<T> {
                 });
         });
         setIcon(this.copy, Icons.COPY);
-    }
-}
-
-export class ArrayRoller<T = any> extends BareRoller<T> {
-    declare result: any;
-    results: any[];
-    getTooltip(): string {
-        return `${this.options.toString()}\n\n${this.results.toString()}`;
-    }
-    async roll() {
-        const options = [...this.options];
-
-        this.results = [...Array(this.rolls)]
-            .map(() => {
-                let option =
-                    options[this.getRandomBetween(0, options.length - 1)];
-                options.splice(options.indexOf(option), 1);
-                return option;
-            })
-            .filter((r) => r);
-        this.render();
-        this.trigger("new-result");
-        this.result = this.results[0];
-        return this.results[0];
-    }
-    async build() {
-        this.resultEl.empty();
-        this.resultEl.setText(this.results.toString());
-    }
-    constructor(
-        data: DiceRollerSettings,
-        public options: any[],
-        public rolls: number
-    ) {
-        super(data, ``);
-    }
-}
-
-export class ChainRoller extends BasicRoller<string> {
-    subRollers: BasicRoller[];
-    result: string;
-
-    constructor(
-        data: DiceRollerSettings,
-        original: string,
-        subRollers: BasicRoller[],
-        position = data.position
-    ) {
-        super(data, original, [] as any, position);
-        this.subRollers = subRollers;
-    }
-
-    async roll() {
-        const results: string[] = [];
-        for (const roller of this.subRollers) {
-            try {
-                await roller.roll();
-                const replacer = await roller.getReplacer?.();
-                if (replacer) {
-                    results.push(replacer.toString());
-                }
-                else if ((roller as any).result !== undefined) {
-                    results.push(String((roller as any).result));
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
-        this.result = results.join(CHAIN_RESULT_SEPARATOR + " ");
-        this.render();
-        return this.result;
-    }
-
-    async build() {
-        this.resultEl.empty();
-        this.resultEl.setText(this.result ?? "");
-    }
-
-    getTooltip() {
-        return this.subRollers.map((s) => s.getTooltip?.() ?? "").join("\n\n");
-    }
-
-    async getReplacer() {
-        return this.result ?? "";
     }
 }

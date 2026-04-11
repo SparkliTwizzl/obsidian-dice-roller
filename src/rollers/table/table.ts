@@ -51,6 +51,22 @@ export class TableRoller extends GenericFileRoller<string> {
         this.getPath();
     }
 
+    async build() {
+        this.resultEl.empty();
+        const result = [this.result];
+        if (this.data.displayResultsInline) {
+            result.unshift(this.inlineText);
+        }
+        const resultEl = this.resultEl.createSpan("embedded-table-result");
+        MarkdownRenderer.render(
+            this.app,
+            this.getResultText(),
+            resultEl,
+            this.source,
+            new Component()
+        );
+    }
+
     private async getLookupRanges(table: Table) {
         let lookupRanges = table.rows.map((row) => {
             const [range, option] = row
@@ -67,6 +83,84 @@ export class TableRoller extends GenericFileRoller<string> {
             ];
         }).filter(Boolean) as [range: [min: number, max: number], option: string][];
         return lookupRanges;
+    }
+
+    async getOptions(cache: CachedMetadata, data: string) {
+        this.cache = cache;
+
+        if (!this.cache ||
+            !this.cache.blocks ||
+            !(this.block in this.cache.blocks)
+        ) {
+            throw new Error(
+                "Could not read file cache. Does the block reference exist?\n\n" +
+                    `${this.path} > ${this.block}`
+            );
+        }
+
+        const section = this.cache.sections?.find(
+            (s) => s.position == this.cache.blocks[this.block].position
+        );
+        const position = this.cache.blocks[this.block].position;
+        const content = data.slice(position.start.offset, position.end.offset);
+
+        if (!(await this.checkForDirtiness(content))) return;
+
+        this.content = content;
+
+        if (section && section.type === "list") {
+            this.options = this.content.split("\n");
+        } else {
+            let table = extract(this.content);
+
+            /** Check for Lookup Table */
+            if (/dice:\s*([\s\S]+)/.test(
+                    Array.from(table.columns.keys())[0]
+                ) || this.lookup
+            ) {
+                const rollString =
+                    this.lookup ??
+                    Array.from(table.columns.keys())[0]
+                        .split(":")
+                        .pop()
+                        .replace(/\`/g, "");
+
+                const roller = await API.getRoller(
+                    rollString.replace(/{ESCAPED_PIPE}/g, "\\|"),
+                    this.source
+                );
+                if (roller) {
+                    roller.addContexts(...this.components);
+                    if (roller instanceof StackRoller) {
+                        this.lookupRoller = roller;
+                        this.lookupRanges = await this.getLookupRanges(table);
+                        this.isLookup = true;
+                    } else if (roller instanceof TableRoller) {
+                        this.indirectRoller = roller;
+                        this.lookupRanges = await this.getLookupRanges(table);
+                        this.isIndirect = true;
+                    }
+                }
+            }
+            /** Check for 2d Rolling */
+            if (this.header === "xy" && !table.columns.has("xy")) {
+                this.options = [];
+                for (const column of Array.from(table.columns.values()).slice(
+                    1
+                )) {
+                    this.options.push(...column);
+                }
+            } else if (this.header && table.columns.has(this.header)) {
+                this.options = table.columns.get(this.header);
+            } else {
+                if (this.header) {
+                    throw new Error(
+                        `Header ${this.header} was not found in table ${this.path} > ${this.block}.`
+                    );
+                }
+                this.options = table.rows;
+            }
+        }
     }
 
     getPath() {
@@ -93,126 +187,8 @@ export class TableRoller extends GenericFileRoller<string> {
         this.header = header;
     }
 
-    getTooltip() {
-        return this.prettyTooltip;
-    }
-
     async getReplacer() {
         return this.result;
-    }
-
-    getResultText(): string {
-        const result = [this.result];
-        if (this.data.displayResultsInline) {
-            result.unshift(this.inlineText);
-        }
-        return result.join("");
-    }
-
-    async build() {
-        this.resultEl.empty();
-        const result = [this.result];
-        if (this.data.displayResultsInline) {
-            result.unshift(this.inlineText);
-        }
-        const resultEl = this.resultEl.createSpan("embedded-table-result");
-        MarkdownRenderer.render(
-            this.app,
-            this.getResultText(),
-            resultEl,
-            this.source,
-            new Component()
-        );
-    }
-
-    prettify(input: string): string {
-        const specialChars = /(.*?)(\(|\)|;|\|\|)(.*)/;
-        const tab = "\t";
-        let tabCount = 0;
-        let output: string = "";
-
-        let remaining: string = input;
-        let matches: RegExpMatchArray;
-        while ((matches = remaining.match(specialChars))) {
-            let [, beforeSpecial, special, afterSpecial] = matches;
-            output += beforeSpecial;
-            if (special == ")") {
-                tabCount--;
-                output += "\n";
-                output += tab.repeat(tabCount);
-                output += ")";
-            } else {
-                if (special == "(") {
-                    tabCount++;
-                    output += "(";
-                } else if (special == ";") {
-                    output += ",";
-                } else if (special == "||") {
-                    output += "|";
-                }
-                output += "\n";
-                output += tab.repeat(tabCount);
-            }
-            remaining = afterSpecial;
-        }
-        output += remaining;
-
-        return output;
-    }
-
-    async getSubResult(input: string | number): Promise<SubRollerResult> {
-        let res: SubRollerResult = new SubRollerResult();
-        if (typeof input === "number") {
-            res.result = input.toString();
-        } else {
-            res.result = input;
-        }
-        let subTooltips: string[] = [];
-
-        // WARN: we may receive an input that is not string (but a number). Check
-        // for embeded formulas only if we can.
-        if (typeof input === "string") {
-            // Look for dice blocks: `dice: <formula>`
-            const rollerPattern = /(?:\`dice:)(.*?)(?:\`)/g;
-            const foundRollers = input.matchAll(rollerPattern);
-
-            for (let foundRoller of foundRollers) {
-                const formula = foundRoller[1].trim();
-
-                // Create sub roller with formula
-                const subRoller = await API.getRoller(formula, this.source);
-                if (subRoller == null) {
-                    continue;
-                }
-                subRoller.addContexts(...this.components);
-                // Roll it
-                await subRoller.roll();
-                // Get sub result
-                const rollerResult = await this.getSubResult(subRoller.result);
-
-                let result: string;
-                if ((rollerResult.result as any) instanceof TFile) {
-                    result = (rollerResult.result as unknown as TFile).basename;
-                } else {
-                    result = rollerResult.result;
-                }
-
-                // Replace dice block by sub result
-                res.result = res.result.replace(foundRoller[0], result);
-
-                // Update tooltip
-                if (subRoller instanceof TableRoller) {
-                    subTooltips.push(subRoller.combinedTooltip);
-                } else {
-                    const [top, bottom] = subRoller.getTooltip().split("\n");
-                    subTooltips.push(top + " --> " + bottom);
-                }
-            }
-        }
-
-        res.combinedTooltip = subTooltips.join(";");
-
-        return res;
     }
 
     async getResult() {
@@ -235,6 +211,7 @@ export class TableRoller extends GenericFileRoller<string> {
                     }
                     const rollsRoller = roller as StackRoller;
                     rollsRoller.addContexts(...this.components);
+
                     // Run the helper roll but prevent it from broadcasting an
                     // event to the workspace (which would log to the Dice Tray).
                     const workspace: any = this.app.workspace as any;
@@ -345,6 +322,108 @@ export class TableRoller extends GenericFileRoller<string> {
         return res.join("||");
     }
 
+    getResultText(): string {
+        const result = [this.result];
+        if (this.data.displayResultsInline) {
+            result.unshift(this.inlineText);
+        }
+        return result.join("");
+    }
+
+    async getSubResult(input: string | number): Promise<SubRollerResult> {
+        let res: SubRollerResult = new SubRollerResult();
+        if (typeof input === "number") {
+            res.result = input.toString();
+        } else {
+            res.result = input;
+        }
+        let subTooltips: string[] = [];
+
+        // WARN: we may receive an input that is not string (but a number). Check
+        // for embeded formulas only if we can.
+        if (typeof input === "string") {
+            // Look for dice blocks: `dice: <formula>`
+            const rollerPattern = /(?:\`dice:)(.*?)(?:\`)/g;
+            const foundRollers = input.matchAll(rollerPattern);
+
+            for (let foundRoller of foundRollers) {
+                const formula = foundRoller[1].trim();
+
+                // Create sub roller with formula
+                const subRoller = await API.getRoller(formula, this.source);
+                if (subRoller == null) {
+                    continue;
+                }
+                subRoller.addContexts(...this.components);
+                // Roll it
+                await subRoller.roll();
+                // Get sub result
+                const rollerResult = await this.getSubResult(subRoller.result);
+
+                let result: string;
+                if ((rollerResult.result as any) instanceof TFile) {
+                    result = (rollerResult.result as unknown as TFile).basename;
+                } else {
+                    result = rollerResult.result;
+                }
+
+                // Replace dice block by sub result
+                res.result = res.result.replace(foundRoller[0], result);
+
+                // Update tooltip
+                if (subRoller instanceof TableRoller) {
+                    subTooltips.push(subRoller.combinedTooltip);
+                } else {
+                    const [top, bottom] = subRoller.getTooltip().split("\n");
+                    subTooltips.push(top + " --> " + bottom);
+                }
+            }
+        }
+
+        res.combinedTooltip = subTooltips.join(";");
+
+        return res;
+    }
+
+    getTooltip() {
+        return this.prettyTooltip;
+    }
+
+    prettify(input: string): string {
+        const specialChars = /(.*?)(\(|\)|;|\|\|)(.*)/;
+        const tab = "\t";
+        let tabCount = 0;
+        let output: string = "";
+
+        let remaining: string = input;
+        let matches: RegExpMatchArray;
+        while ((matches = remaining.match(specialChars))) {
+            let [, beforeSpecial, special, afterSpecial] = matches;
+            output += beforeSpecial;
+            if (special == ")") {
+                tabCount--;
+                output += "\n";
+                output += tab.repeat(tabCount);
+                output += ")";
+            } else {
+                if (special == "(") {
+                    tabCount++;
+                    output += "(";
+                } else if (special == ";") {
+                    output += ",";
+                } else if (special == "||") {
+                    output += "|";
+                }
+                output += "\n";
+                output += tab.repeat(tabCount);
+            }
+            remaining = afterSpecial;
+        }
+        output += remaining;
+
+        return output;
+    }
+
     async roll(): Promise<string> {
         return new Promise(async (resolve) => {
             let performRoll = async () => {
@@ -361,84 +440,6 @@ export class TableRoller extends GenericFileRoller<string> {
                 this.load();
             }
         });
-    }
-
-    async getOptions(cache: CachedMetadata, data: string) {
-        this.cache = cache;
-
-        if (!this.cache ||
-            !this.cache.blocks ||
-            !(this.block in this.cache.blocks)
-        ) {
-            throw new Error(
-                "Could not read file cache. Does the block reference exist?\n\n" +
-                    `${this.path} > ${this.block}`
-            );
-        }
-
-        const section = this.cache.sections?.find(
-            (s) => s.position == this.cache.blocks[this.block].position
-        );
-        const position = this.cache.blocks[this.block].position;
-        const content = data.slice(position.start.offset, position.end.offset);
-
-        if (!(await this.checkForDirtiness(content))) return;
-
-        this.content = content;
-
-        if (section && section.type === "list") {
-            this.options = this.content.split("\n");
-        } else {
-            let table = extract(this.content);
-
-            /** Check for Lookup Table */
-            if (/dice:\s*([\s\S]+)/.test(
-                    Array.from(table.columns.keys())[0]
-                ) || this.lookup
-            ) {
-                const rollString =
-                    this.lookup ??
-                    Array.from(table.columns.keys())[0]
-                        .split(":")
-                        .pop()
-                        .replace(/\`/g, "");
-
-                const roller = await API.getRoller(
-                    rollString.replace(/{ESCAPED_PIPE}/g, "\\|"),
-                    this.source
-                );
-                if (roller) {
-                    roller.addContexts(...this.components);
-                    if (roller instanceof StackRoller) {
-                        this.lookupRoller = roller;
-                        this.lookupRanges = await this.getLookupRanges(table);
-                        this.isLookup = true;
-                    } else if (roller instanceof TableRoller) {
-                        this.indirectRoller = roller;
-                        this.lookupRanges = await this.getLookupRanges(table);
-                        this.isIndirect = true;
-                    }
-                }
-            }
-            /** Check for 2d Rolling */
-            if (this.header === "xy" && !table.columns.has("xy")) {
-                this.options = [];
-                for (const column of Array.from(table.columns.values()).slice(
-                    1
-                )) {
-                    this.options.push(...column);
-                }
-            } else if (this.header && table.columns.has(this.header)) {
-                this.options = table.columns.get(this.header);
-            } else {
-                if (this.header) {
-                    throw new Error(
-                        `Header ${this.header} was not found in table ${this.path} > ${this.block}.`
-                    );
-                }
-                this.options = table.rows;
-            }
-        }
     }
 }
 
