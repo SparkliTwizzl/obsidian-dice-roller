@@ -13,8 +13,12 @@ import { ChainRoller } from "src/rollers/roller";
 import { ExpectedValue } from "../types/api";
 import { API } from "../api/api";
 import { type DiceIcon, IconManager } from "./view.icons";
+import {
+    CHAIN_ROLL_DELIMITER,
+    DICE_TRAY_NO_DICE_MSG,
+    DICE_TRAY_NOT_SUPPORTED_MSG
+} from "src/utils/constants";
 import { Icons } from "src/utils/icons";
-import { CHAIN_RESULT_SEPARATOR, CHAIN_ROLL_DELIMITER } from "src/utils/constants";
 import { nanoid } from "nanoid";
 import DiceTray from "./ui/DiceTray.svelte";
 import type { RenderableRoller } from "src/rollers/roller";
@@ -508,14 +512,12 @@ export default class DiceView extends ItemView {
         try {
             const roller = await API.getRoller(formula, VIEW_TYPE, opts);
             if (roller == null) return;
-            let noDiceMsg = "No dice.";
-            let unsupportedMsg = "The Dice Tray only supports dice rolls.";
             if (roller instanceof StackRoller) {
                 roller.iconEl.detach();
                 roller.containerEl.onclick = null;
                 roller.buildDiceTree();
                 if (!roller.children.length) {
-                    throw new Error(noDiceMsg);
+                    throw new Error(DICE_TRAY_NO_DICE_MSG);
                 }
                 await roller.roll(this.plugin.data.renderer).catch((e) => {
                     throw e;
@@ -523,81 +525,20 @@ export default class DiceView extends ItemView {
             } else if (roller instanceof ChainRoller) {
                 roller.iconEl?.detach();
                 roller.containerEl.onclick = null;
-
-                // Suppress workspace triggers while running sub-rolls to avoid
-                // the Dice Tray listener adding individual sub-roll entries.
-                const workspace: any = this.plugin.app.workspace as any;
-                const originalTrigger = workspace.trigger;
-                let unsupported = false;
-                try {
-                    workspace.trigger = () => {};
-
-                    // Execute each sub-roller. If a sub-roller is a StackRoller, render/roll it appropriately.
-                    for (const sub of roller.subRollers) {
-                        if (sub instanceof StackRoller) {
-                            (sub as StackRoller).buildDiceTree();
-                            if (!(sub as StackRoller).children.length) {
-                                throw new Error(noDiceMsg);
-                            }
-                            await (sub as StackRoller).roll(this.plugin.data.renderer);
-                        } else {
-                            // If any sub-roller is not a StackRoller, the whole
-                            // ChainRoller should be treated as unsupported for
-                            // the Dice Tray to match top-level non-StackRoller behavior.
-                            unsupported = true;
-                            break;
-                        }
-                    }
-                } finally {
-                    workspace.trigger = originalTrigger;
-                }
-                if (unsupported) {
-                    throw new Error(unsupportedMsg);
-                }
-
-                // Build the combined result string from sub-rollers so the
-                // view entry contains the final chained result, to match
-                // ChainRoller.roll() behavior.
-                const results: string[] = [];
-                for (const sub of roller.subRollers) {
-                    try {
-                        const replacer = await sub.getReplacer?.();
-                        if (replacer) {
-                            results.push(String(replacer));
-                        } else if ((sub as any).result !== undefined) {
-                            results.push(String((sub as any).result));
-                        }
-                    } catch (e) {
-                        // Ignore individual sub errors when building display.
-                    }
-                }
-
-                const resultValue = results.join(CHAIN_RESULT_SEPARATOR + " ");
-                // Mirror ChainRoller internal state so other callers can
-                // inspect `roller.result` if needed.
-                try {
-                    (roller as any).result = resultValue;
-                } catch (e) {}
-
-                const resultText = roller.getTooltip?.() ?? "";
-                await this.addResult({
-                    result: resultValue,
-                    original: roller.original,
-                    resultText: resultText,
-                    timestamp: new Date().valueOf(),
-                    id: nanoid(12)
-                });
+                await roller.roll_OnlyStackRollers();
             } else {
-                throw new Error(unsupportedMsg);
+                throw new Error(DICE_TRAY_NOT_SUPPORTED_MSG);
             }
         } catch (e: any) {
             new Notice("Invalid Formula: " + e.message);
         } finally {
             this.rollButton.setDisabled(false);
             this.buildButtons();
-            // After rolling, restore to a single empty segment to avoid index/overlap bugs.
+
+            // After rolling, restore to a single empty segment to avoid index/overlap bugs with chained rolls.
             this.formulaSegmentStates = [{ diceRollFormula: new Map(), modifier: 0, hasAdvantage: false, hasDisadvantage: false }];
             this.activeSegmentIndex = 0;
+
             this.setFormula();
         }
     }
