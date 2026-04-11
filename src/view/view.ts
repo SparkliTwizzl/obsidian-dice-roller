@@ -151,7 +151,7 @@ export default class DiceView extends ItemView {
         return this.formulaSegmentStates[index];
     }
 
-    private onClick_ChainRollsButton() {
+    private onClick_AddRollButton() {
         const ta = this.formulaComponent?.inputEl as HTMLTextAreaElement;
         if (!ta) return;
 
@@ -190,6 +190,41 @@ export default class DiceView extends ItemView {
         this.activeSegmentIndex = count;
         ta.focus();
         ta.selectionStart = ta.selectionEnd = position;
+    }
+
+    private resetActiveSegment() {
+        this.formulaSegmentStates = [{ diceRollFormula: new Map(), modifier: 0, hasAdvantage: false, hasDisadvantage: false }];
+        this.activeSegmentIndex = 0;
+    }
+    
+    private updateActiveSegmentFromTextarea(): void {
+        const ta = this.formulaComponent?.inputEl as HTMLTextAreaElement;
+        if (!ta) {
+            this.activeSegmentIndex = null;
+            this.updateAdvDisButtonStates();
+            return;
+        }
+        if (!ta.value.includes(CHAIN_ROLL_DELIMITER)) {
+            this.activeSegmentIndex = 0;
+            this.updateAdvDisButtonStates();
+            return;
+        }
+        const selection = ta.selectionStart ?? ta.value.length;
+        const parts = ta.value.split(CHAIN_ROLL_DELIMITER).map((p) => p.trim());
+        let position = 0;
+        let activeIndex = parts.length - 1;
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            const start = position;
+            const end = position + part.length;
+            if (selection >= start && selection <= end) {
+                activeIndex = i;
+                break;
+            }
+            position = end + (CHAIN_ROLL_DELIMITER + " ").length;
+        }
+        this.activeSegmentIndex = activeIndex;
+        this.updateAdvDisButtonStates();
     }
 
     private updateAdvDisButtonStates() {
@@ -337,44 +372,13 @@ export default class DiceView extends ItemView {
                 st.diceRollFormula = new Map();
             });
 
-        // Track caret/selection to know which formula segment is active.
         try {
             const ta = this.formulaComponent.inputEl as HTMLTextAreaElement;
-            const updateActive = () => {
-                if (!ta) {
-                    this.activeSegmentIndex = null;
-                        this.updateAdvDisButtonStates();
-                    return;
-                }
-                if (!ta.value.includes(CHAIN_ROLL_DELIMITER)) {
-                    // single segment -> default to last (0)
-                    this.activeSegmentIndex = 0;
-                        this.updateAdvDisButtonStates();
-                    return;
-                }
-                const selection = ta.selectionStart ?? ta.value.length;
-                const parts = ta.value.split(CHAIN_ROLL_DELIMITER).map((p) => p.trim());
-                let position = 0;
-                let activeIndex = parts.length - 1;
-                for (let i = 0; i < parts.length; i++) {
-                    const part = parts[i];
-                    const start = position;
-                    const end = position + part.length;
-                    if (selection >= start && selection <= end) {
-                        activeIndex = i;
-                        break;
-                    }
-                    position = end + (CHAIN_ROLL_DELIMITER + " ").length;
-                }
-                this.activeSegmentIndex = activeIndex;
-                this.updateAdvDisButtonStates();
-            };
-
-            ta.addEventListener("click", updateActive);
-            ta.addEventListener("keyup", updateActive);
-            ta.addEventListener("select", updateActive);
-            ta.addEventListener("focus", updateActive);
-            ta.addEventListener("input", updateActive);
+            ta.addEventListener("click", () => this.updateActiveSegmentFromTextarea());
+            ta.addEventListener("keyup", () => this.updateActiveSegmentFromTextarea());
+            ta.addEventListener("select", () => this.updateActiveSegmentFromTextarea());
+            ta.addEventListener("focus", () => this.updateActiveSegmentFromTextarea());
+            ta.addEventListener("input", () => this.updateActiveSegmentFromTextarea());
         } catch (e) {
             console.error("DiceView: Failed to create text area input listener.")
         }
@@ -384,7 +388,7 @@ export default class DiceView extends ItemView {
         this.addRollButton = new ExtraButtonComponent(formulaButtons)
             .setIcon(Icons.ADD)
             .setTooltip("Add Another Roll")
-            .onClick(() => this.onClick_ChainRollsButton());
+            .onClick(() => this.onClick_AddRollButton());
         this.addRollButton.extraSettingsEl.addClass("dice-roller-add");
 
         this.focusPreviousRollButton = new ExtraButtonComponent(formulaButtons)
@@ -429,7 +433,9 @@ export default class DiceView extends ItemView {
     }
 
     clear() {
-
+        const ta = this.formulaComponent.inputEl as HTMLTextAreaElement;
+        ta.value = "";
+        this.resetActiveSegment();
     }
 
     get customFormulas() {
@@ -526,11 +532,7 @@ export default class DiceView extends ItemView {
         } finally {
             this.rollButton.setDisabled(false);
             this.buildButtons();
-
-            // After rolling, restore to a single empty segment to avoid index/overlap bugs with chained rolls.
-            this.formulaSegmentStates = [{ diceRollFormula: new Map(), modifier: 0, hasAdvantage: false, hasDisadvantage: false }];
-            this.activeSegmentIndex = 0;
-
+            this.resetActiveSegment();
             this.setFormula();
         }
     }
@@ -595,29 +597,16 @@ export default class DiceView extends ItemView {
             str.push(`${Math.abs(state.modifier)}`);
         }
 
-        const newSegment = str.join(" ");
-
         const ta = this.formulaComponent?.inputEl as HTMLTextAreaElement;
+        const newSegment = str.join(" ");
 
         if (ta && ta.value.includes(CHAIN_ROLL_DELIMITER)) {
             const parts = ta.value.split(CHAIN_ROLL_DELIMITER).map((p) => p.trim());
 
             let activeIndex = this.activeSegmentIndex;
             if (activeIndex == null || activeIndex < 0 || activeIndex >= parts.length) {
-                const selection = ta.selectionStart ?? ta.value.length;
-                // determine active segment by caret position
-                let position = 0;
-                activeIndex = parts.length - 1;
-                for (let i = 0; i < parts.length; i++) {
-                    const part = parts[i];
-                    const start = position;
-                    const end = position + part.length;
-                    if (selection >= start && selection <= end) {
-                        activeIndex = i;
-                        break;
-                    }
-                    position = end + (CHAIN_ROLL_DELIMITER + " ").length; // move past delimiter + space
-                }
+                this.updateActiveSegmentFromTextarea();
+                activeIndex = this.activeSegmentIndex ?? parts.length - 1;
             }
 
             if (activeIndex < 0) activeIndex = 0;
