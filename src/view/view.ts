@@ -139,7 +139,46 @@ export default class DiceView extends ItemView {
         }
     }
 
-    private getActiveState() {
+    private selectNextFormulaSegment() {
+        if (this.formulaSegmentStates.length < 2) return;
+        const data = this.getFormulaSegments();
+        if (!data.ta) return;
+
+        const { ta, segments, startIndexes } = data;
+
+        this.updateActiveSegmentFromTextarea();
+        let index = this.activeSegmentIndex ?? segments.length - 1;
+        if (index < 0) index = 0;
+        if (index >= segments.length - 1) return;
+
+        const next = index + 1;
+        this.activeSegmentIndex = next;
+        const caret = startIndexes[next] + segments[next].length;
+        ta.focus();
+        ta.selectionStart = ta.selectionEnd = caret;
+        this.updateAdvDisButtonStates();
+    }
+
+    private selectPreviousFormulaSegment() {
+        if (this.formulaSegmentStates.length < 2) return;
+        const data = this.getFormulaSegments();
+        if (!data.ta) return;
+
+        const { ta, segments, startIndexes } = data;
+
+        this.updateActiveSegmentFromTextarea();
+        let index = this.activeSegmentIndex ?? segments.length - 1;
+        if (index <= 0) return;
+
+        const prev = index - 1;
+        this.activeSegmentIndex = prev;
+        const caret = startIndexes[prev] + segments[prev].length;
+        ta.focus();
+        ta.selectionStart = ta.selectionEnd = caret;
+        this.updateAdvDisButtonStates();
+    }
+
+    private getActiveFormulaSegment() {
         const index = this.activeSegmentIndex ?? this.formulaSegmentStates.length - 1;
         if (index < 0) return this.formulaSegmentStates[0];
         if (index >= this.formulaSegmentStates.length) {
@@ -149,6 +188,22 @@ export default class DiceView extends ItemView {
             }
         }
         return this.formulaSegmentStates[index];
+    }
+
+    private getFormulaSegments(): { ta: HTMLTextAreaElement | null; segments: string[]; startIndexes: number[] } {
+        const ta = this.formulaComponent?.inputEl as HTMLTextAreaElement;
+        if (!ta) return { ta: null, segments: [], startIndexes: [] };
+        if (!ta.value.includes(CHAIN_ROLL_DELIMITER)) return { ta: null, segments: [], startIndexes: [] };
+
+        const segments = ta.value.split(CHAIN_ROLL_DELIMITER).map((p) => p.trim());
+        let position = 0;
+        const startIndexes: number[] = [];
+        for (let i = 0; i < segments.length; i++) {
+            startIndexes.push(position);
+            position = position + segments[i].length + (CHAIN_ROLL_DELIMITER + " ").length;
+        }
+
+        return { ta, segments, startIndexes };
     }
 
     private onClick_AddRollButton() {
@@ -196,7 +251,7 @@ export default class DiceView extends ItemView {
         this.formulaSegmentStates = [{ diceRollFormula: new Map(), modifier: 0, hasAdvantage: false, hasDisadvantage: false }];
         this.activeSegmentIndex = 0;
     }
-    
+
     private updateActiveSegmentFromTextarea(): void {
         const ta = this.formulaComponent?.inputEl as HTMLTextAreaElement;
         if (!ta) {
@@ -228,7 +283,7 @@ export default class DiceView extends ItemView {
     }
 
     private updateAdvDisButtonStates() {
-        const state = this.getActiveState();
+        const state = this.getActiveFormulaSegment();
         if (state.hasAdvantage) {
             this.advantageButton.setCta();
         } else {
@@ -285,7 +340,7 @@ export default class DiceView extends ItemView {
                         this.roll(icon.formula);
                         return;
                     }
-                    const state = this.getActiveState();
+                    const state = this.getActiveFormulaSegment();
                     if (!state.diceRollFormula.has(icon)) {
                         state.diceRollFormula.set(icon, 0);
                     }
@@ -296,13 +351,13 @@ export default class DiceView extends ItemView {
                 });
         }
 
-        const activeState = this.getActiveState();
+        const activeState = this.getActiveFormulaSegment();
         const rollModifiers = this.gridEl.createDiv("roll-modifiers");
 
         new ExtraButtonComponent(rollModifiers)
             .setIcon(Icons.MINUS)
                 .onClick(() => {
-                const state = this.getActiveState();
+                const state = this.getActiveFormulaSegment();
                 state.modifier -= 1;
                 this.setFormula();
             });
@@ -310,7 +365,7 @@ export default class DiceView extends ItemView {
         const adv = new ButtonComponent(rollModifiers)
             .setButtonText("ADV")
             .onClick(() => {
-                const state = this.getActiveState();
+                const state = this.getActiveFormulaSegment();
                 state.hasAdvantage = !state.hasAdvantage;
                 state.hasDisadvantage = false;
                 if (state.hasAdvantage) {
@@ -329,7 +384,7 @@ export default class DiceView extends ItemView {
         const dis = new ButtonComponent(rollModifiers)
             .setButtonText("DIS")
             .onClick(() => {
-                const state = this.getActiveState();
+                const state = this.getActiveFormulaSegment();
                 state.hasDisadvantage = !state.hasDisadvantage;
                 state.hasAdvantage = false;
                 if (state.hasDisadvantage) {
@@ -348,7 +403,7 @@ export default class DiceView extends ItemView {
         new ExtraButtonComponent(rollModifiers)
             .setIcon(Icons.PLUS)
             .onClick(() => {
-                const state = this.getActiveState();
+                const state = this.getActiveFormulaSegment();
                 state.modifier += 1;
                 this.setFormula();
             });
@@ -368,7 +423,7 @@ export default class DiceView extends ItemView {
         this.formulaComponent = new TextAreaComponent(this.formulaEl)
             .setPlaceholder("Dice Formula")
             .onChange((v) => {
-                const st = this.getActiveState();
+                const st = this.getActiveFormulaSegment();
                 st.diceRollFormula = new Map();
             });
 
@@ -394,15 +449,13 @@ export default class DiceView extends ItemView {
         this.focusPreviousRollButton = new ExtraButtonComponent(formulaButtons)
             .setIcon(Icons.PREVIOUS)
             .setTooltip("Select Previous Roll")
-            .onClick(() => {
-            });
+            .onClick(() => this.selectPreviousFormulaSegment());
         this.focusPreviousRollButton.extraSettingsEl.addClass("dice-roller-focus-next");
 
         this.focusNextRollButton = new ExtraButtonComponent(formulaButtons)
             .setIcon(Icons.NEXT)
             .setTooltip("Select Next Roll")
-            .onClick(() => {
-            });
+            .onClick(() => this.selectNextFormulaSegment());
         this.focusNextRollButton.extraSettingsEl.addClass("dice-roller-focus-next");
 
         this.removeRollButton = new ExtraButtonComponent(formulaButtons)
@@ -547,7 +600,7 @@ export default class DiceView extends ItemView {
     }
 
     setFormula() {
-        const state = this.getActiveState();
+        const state = this.getActiveFormulaSegment();
         if (!state.diceRollFormula.size && !state.modifier) {
             this.formulaComponent.inputEl.value = "";
             return;
