@@ -487,7 +487,7 @@ export default class DiceView extends ItemView {
             .setIcon(Icons.PREVIOUS)
             .setTooltip("Select Previous Roll")
             .onClick(() => this.selectPreviousFormulaSegment());
-        this.focusPreviousRollButton.extraSettingsEl.addClass("dice-roller-focus-next");
+        this.focusPreviousRollButton.extraSettingsEl.addClass("dice-roller-focus-previous");
 
         this.focusNextRollButton = new ExtraButtonComponent(formulaButtons)
             .setIcon(Icons.NEXT)
