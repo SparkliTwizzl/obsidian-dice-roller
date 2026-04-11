@@ -1,4 +1,4 @@
-import { ArrayRoller, ChainRoller, type BasicRoller } from "../rollers/roller";
+import { ArrayRoller, type BasicRoller } from "../rollers/roller";
 import { ButtonPosition, type DiceRollerSettings } from "../settings/settings.types";
 import { ExpectedValue, Round } from "../types/api";
 import { CHAIN_ROLL_DELIMITER } from "src/utils/constants";
@@ -8,12 +8,13 @@ import { Lexer, type LexicalToken } from "../lexer/lexer";
 import { type App } from "obsidian";
 
 import { DataviewManager } from "./api.dataview";
-import { StackRoller } from "src/rollers/dice/stack";
-import { TableRoller } from "src/rollers/table/table";
-import { SectionRoller } from "src/rollers/section/section";
-import { DataViewRoller, TagRoller } from "src/rollers/tag/tag";
-import { LineRoller } from "src/rollers/line/line";
 import { NarrativeStackRoller } from "src/rollers/dice/narrative";
+import { StackRoller } from "src/rollers/dice/stack";
+import { ChainRoller } from "src/rollers/chain/chain";
+import { LineRoller } from "src/rollers/line/line";
+import { SectionRoller } from "src/rollers/section/section";
+import { TableRoller } from "src/rollers/table/table";
+import { DataViewRoller, TagRoller } from "src/rollers/tag/tag";
 
 export * from "../types/api";
 
