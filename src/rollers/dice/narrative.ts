@@ -481,7 +481,9 @@ ${map.light > 0 ? `Light Side: ${map.light}` : ''}
 ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
     }
 
-    onload(): void {
+    private buildChildrenIfNeeded(): void {
+        if (this.children && this.children.length) return;
+
         const map: Map<NarrativeFace, number> = new Map();
 
         for (const lexeme of this.lexemes) {
@@ -526,6 +528,10 @@ ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
             }
             this.children.push(roller);
         }
+    }
+
+    onload(): void {
+        this.buildChildrenIfNeeded();
         super.onload();
     }
 
@@ -546,6 +552,7 @@ ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
     }
 
     rollSync() {
+        this.buildChildrenIfNeeded();
         for (const dice of this.children) {
             dice.rollSync();
         }
