@@ -7,6 +7,15 @@ export class ChainRoller extends BasicRoller {
     shouldShowFormula: boolean = false;
     subRollers: BasicRoller[] = [];
 
+    private async executeRoll() {
+        let subResults = [];
+        for (let i = 0; i < this.subRollers.length; ++i) {
+            let subResult = await this.subRollers[i].rollSilent();
+            subResults.push(subResult);
+        }
+        return subResults.join(`${CHAIN_RESULT_SEPARATOR} `);
+    }
+
     constructor(
         data: DiceRollerSettings,
         original: string,
@@ -15,6 +24,15 @@ export class ChainRoller extends BasicRoller {
     ) {
         super(data, original, [] as any, position);
         this.subRollers = subRollers;
+    }
+
+    addContexts(...components: any[]) {
+        super.addContexts(...components);
+        for (const s of this.subRollers) {
+            if ((s as any).addContexts) {
+                (s as any).addContexts(...components);
+            }
+        }
     }
 
     async build() {
@@ -32,19 +50,14 @@ export class ChainRoller extends BasicRoller {
     }
 
     async roll() {
-        this.rollSilent();
+        this.result = await this.executeRoll();
         this.render();
         this.trigger("new-result");
         return this.result;
     }
 
     async rollSilent() {
-        let subResults = [];
-        for (let i = 0; i < this.subRollers.length; ++i) {
-            let subResult = await this.subRollers[i].rollSilent();
-            subResults.push(subResult);
-        }
-        this.result = subResults.join(`${CHAIN_RESULT_SEPARATOR} `);
-
+        this.result = await this.executeRoll()
+        return this.result;
     }
 }
