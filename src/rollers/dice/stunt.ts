@@ -23,6 +23,7 @@ export class StuntRoller extends DiceRoller {
     constructor(public dice: string, lexeme?: LexicalToken) {
         super(dice, lexeme);
     }
+
     async roll() {
         await Promise.all([
             new Promise<void>(async (resolve) => {
@@ -33,6 +34,21 @@ export class StuntRoller extends DiceRoller {
             new Promise<void>(async (resolve) => {
                 this.stunt.shouldRender = this.shouldRender;
                 await this.stunt.roll();
+                resolve();
+            })
+        ]);
+    }
+
+    async rollSilent() {
+        await Promise.all([
+            new Promise<void>(async (resolve) => {
+                this.pair.shouldRender = this.shouldRender;
+                await this.pair.rollSilent();
+                resolve();
+            }),
+            new Promise<void>(async (resolve) => {
+                this.stunt.shouldRender = this.shouldRender;
+                await this.stunt.rollSilent();
                 resolve();
             })
         ]);

@@ -212,6 +212,7 @@ export class SectionRoller extends GenericEmbeddedRoller<RollerCache> {
             this.options.push(...this.cache.listItems);
         }
     }
+
     async roll(): Promise<RollerCache> {
         return new Promise((resolve, reject) => {
             if (!this.loaded) {
@@ -251,6 +252,33 @@ export class SectionRoller extends GenericEmbeddedRoller<RollerCache> {
                 this.trigger("new-result");
                 this.result = this.results[0];
                 resolve(this.results[0]);
+            }
+        });
+    }
+
+    async rollSilent(): Promise<RollerCache> {
+        return new Promise((resolve, reject) => {
+            let performRoll = async() => {
+                const options = [...this.options];
+                this.results = [...Array(this.rolls)]
+                    .map(() => {
+                        let option =
+                            options[
+                                this.getRandomBetween(0, options.length - 1)
+                            ];
+                        options.splice(options.indexOf(option), 1);
+                        return option;
+                    })
+                    .filter((r) => r);
+                this.result = this.results[0];
+                resolve(this.results[0]);
+            };
+
+            if (this.loaded) {
+                performRoll();
+            } else {
+                this.once("loaded", () => performRoll());
+                this.load();
             }
         });
     }

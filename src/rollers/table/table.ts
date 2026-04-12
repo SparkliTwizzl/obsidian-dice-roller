@@ -188,6 +188,61 @@ export class TableRoller extends GenericFileRoller<string> {
         return res;
     }
 
+    async getSubResultSilent(input: string | number): Promise<SubRollerResult> {
+        let res: SubRollerResult = new SubRollerResult();
+        if (typeof input === "number") {
+            res.result = input.toString();
+        } else {
+            res.result = input;
+        }
+        let subTooltips: string[] = [];
+
+        // WARN: we may receive an input that is not string (but a number). Check
+        // for embeded formulas only if we can.
+        if (typeof input === "string") {
+            // Look for dice blocks: `dice: <formula>`
+            const rollerPattern = /(?:\`dice:)(.*?)(?:\`)/g;
+            const foundRollers = input.matchAll(rollerPattern);
+
+            for (let foundRoller of foundRollers) {
+                const formula = foundRoller[1].trim();
+
+                // Create sub roller with formula
+                const subRoller = await API.getRoller(formula, this.source);
+                if (subRoller == null) {
+                    continue;
+                }
+                subRoller.addContexts(...this.components);
+                // Roll it
+                await subRoller.rollSilent();
+                // Get sub result
+                const rollerResult = await this.getSubResult(subRoller.result);
+
+                let result: string;
+                if ((rollerResult.result as any) instanceof TFile) {
+                    result = (rollerResult.result as unknown as TFile).basename;
+                } else {
+                    result = rollerResult.result;
+                }
+
+                // Replace dice block by sub result
+                res.result = res.result.replace(foundRoller[0], result);
+
+                // Update tooltip
+                if (subRoller instanceof TableRoller) {
+                    subTooltips.push(subRoller.combinedTooltip);
+                } else {
+                    const [top, bottom] = subRoller.getTooltip().split("\n");
+                    subTooltips.push(top + " --> " + bottom);
+                }
+            }
+        }
+
+        res.combinedTooltip = subTooltips.join(";");
+
+        return res;
+    }
+
     async getResult() {
         let res = [];
         let subTooltips: string[] = [];
@@ -282,6 +337,102 @@ export class TableRoller extends GenericFileRoller<string> {
         this.prettyTooltip = this.prettify(this.combinedTooltip);
         return res.join("||");
     }
+
+    async getResultSilent() {
+        let res = [];
+        let subTooltips: string[] = [];
+        let formula = this.original;
+
+        if (this.rollsFormula) {
+            try {
+                const roller = await API.getRoller(
+                    this.rollsFormula,
+                    this.source
+                );
+                if (roller) {
+                    if (!(roller instanceof StackRoller)) {
+                        this.prettyTooltip =
+                            "TableRoller only supports dice rolls to select multiple elements.";
+                        new Notice(this.prettyTooltip);
+                        return "ERROR";
+                    }
+                    const rollsRoller = roller as StackRoller;
+                    rollsRoller.addContexts(...this.components);
+                    await rollsRoller.rollSilent();
+                    this.rolls = rollsRoller.result;
+                    if (!rollsRoller.isStatic) {
+                        formula = formula.replace(
+                            this.rollsFormula,
+                            `${this.rollsFormula.trim()} --> ${rollsRoller.getDisplayText()} > `
+                        );
+                    }
+                }
+            } catch (error) {
+                this.prettyTooltip = `TableRoller: '${this.rollsFormula}' is not a valid dice roll.`;
+                new Notice(this.prettyTooltip);
+                return "ERROR";
+            }
+        }
+
+        for (let i = 0; i < this.rolls; i++) {
+            let subTooltip: string = "";
+            let subResult: SubRollerResult;
+            let selectedOption: string = "";
+
+            if (this.isLookup) {
+                const result = await this.lookupRoller.rollSilent();
+                const option = this.lookupRanges.find(
+                    ([range]) =>
+                        (range[1] === undefined && result === range[0]) ||
+                        (result >= range[0] && range[1] >= result)
+                );
+                if (option) {
+                    subTooltip =
+                        this.lookupRoller.original.trim() +
+                        " --> " +
+                        `${this.lookupRoller.getDisplayText()}${
+                            this.header ? " | " + this.header : ""
+                        }`.trim();
+                    selectedOption = option[1];
+                }
+            } else {
+                const options = [...this.options];
+                const randomRowNumber = this.getRandomBetween(
+                    0,
+                    options.length - 1
+                );
+                subTooltip =
+                    options.length +
+                    " rows" +
+                    " --> " +
+                    "[row " +
+                    (randomRowNumber + 1) +
+                    "]";
+                selectedOption = options[randomRowNumber];
+            }
+
+            subResult = await this.getSubResult(selectedOption);
+            res.push(subResult.result);
+
+            if (subResult.combinedTooltip) {
+                subTooltip += " > (" + subResult.combinedTooltip + ")";
+            }
+            subTooltips.push(subTooltip);
+        }
+
+        if (subTooltips.length == 0) {
+            this.combinedTooltip = formula;
+        } else if (subTooltips.length == 1) {
+            this.combinedTooltip = formula + " " + subTooltips.join("");
+        } else {
+            this.combinedTooltip =
+                formula + " ==> (" + subTooltips.join(" ||") + ")";
+        }
+
+        this.prettyTooltip = this.prettify(this.combinedTooltip);
+        return res.join("||");
+    }
+
     async roll(): Promise<string> {
         return new Promise(async (resolve) => {
             if (this.loaded) {
@@ -301,6 +452,22 @@ export class TableRoller extends GenericFileRoller<string> {
                     resolve(this.result);
                 });
 
+                this.load();
+            }
+        });
+    }
+
+    async rollSilent(): Promise<string> {
+        return new Promise(async (resolve) => {
+            let performRoll = async() => {
+                this.result = await this.getResultSilent();
+                resolve(this.result);
+            };
+
+            if (this.loaded) {
+                performRoll();
+            } else {
+                this.once("loaded", async () => performRoll());
                 this.load();
             }
         });

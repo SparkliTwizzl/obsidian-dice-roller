@@ -33,9 +33,15 @@ export class BasicStackRoller extends Roller<number> {
     stackCopy: Array<DiceRoller | string> = [];
     stunted: string = "";
     dice: DiceRoller[] = [];
+
     async roll() {
         return this.rollSync();
     }
+
+    async rollSilent() {
+        return this.rollSilentSync();
+    }
+
     rollSync() {
         this.stunted = "";
         this.parseLexemes();
@@ -49,6 +55,21 @@ export class BasicStackRoller extends Roller<number> {
         this.result = final.result;
         return this.result;
     }
+
+    rollSilentSync() {
+        this.stunted = "";
+        this.parseLexemes();
+        const final = this.stack.pop();
+        final.rollSync();
+        if (final instanceof StuntRoller) {
+            if (final.doubles) {
+                this.stunted = ` - ${final.results.get(0).value} Stunt Points`;
+            }
+        }
+        this.result = final.result;
+        return this.result;
+    }
+
     parseLexemes() {
         let index = 0;
         for (const dice of this.lexemes) {
@@ -452,20 +473,7 @@ export class StackRoller extends RenderableRoller<number> {
     stackCopy: Array<DiceRoller | string> = [];
     children: DiceRoller[] = [];
     hasRunOnce = false;
-    rollSync() {
-        this.stunted = "";
-        this.buildDiceTree();
-        for (const dice of this.children) {
-            dice.rollSync();
-        }
-        this.calculate();
-        this._tooltip = null;
-        this.render();
 
-        this.trigger("new-result");
-        this.hasRunOnce = true;
-        return this.result;
-    }
     buildDiceTree() {
         let index = 0;
         for (const dice of this.lexemes) {
@@ -635,6 +643,7 @@ export class StackRoller extends RenderableRoller<number> {
             }
         }
     }
+
     async roll(render?: boolean) {
         this.stunted = "";
         this.stackCopy = [];
@@ -665,6 +674,63 @@ export class StackRoller extends RenderableRoller<number> {
         this.hasRunOnce = true;
         return this.result;
     }
+
+    async rollSilent(render?: boolean) {
+        this.stunted = "";
+        this.stackCopy = [];
+        if (!this.children.length) {
+            this.buildDiceTree();
+        }
+        DiceRenderer.stop();
+        this.children.forEach((dice) => (dice.shouldRender = false));
+        if (render || (this.shouldRender && this.hasRunOnce)) {
+            await this.renderChildren();
+        } else {
+            for (const dice of this.children) {
+                await dice.roll();
+            }
+        }
+        this.calculate();
+
+        if (
+            this.showRenderNotice &&
+            (render || (this.shouldRender && this.hasRunOnce))
+        ) {
+            new Notice(`${this.getTooltip()}\n\nResult: ${this.result}`);
+        }
+
+        this.hasRunOnce = true;
+        return this.result;
+    }
+
+    rollSync() {
+        this.stunted = "";
+        this.buildDiceTree();
+        for (const dice of this.children) {
+            dice.rollSync();
+        }
+        this.calculate();
+        this._tooltip = null;
+        this.render();
+
+        this.trigger("new-result");
+        this.hasRunOnce = true;
+        return this.result;
+    }
+
+    rollSilentSync() {
+        this.stunted = "";
+        this.buildDiceTree();
+        for (const dice of this.children) {
+            dice.rollSync();
+        }
+        this.calculate();
+        this._tooltip = null;
+
+        this.hasRunOnce = true;
+        return this.result;
+    }
+
     max = Number.MIN_VALUE;
     min = Number.MAX_VALUE;
     calculate() {

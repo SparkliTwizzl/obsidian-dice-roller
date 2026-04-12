@@ -456,17 +456,7 @@ export class DiceRoller implements RenderableDice<number> {
         );
         this.updateResultArray();
     }
-    rollSync() {
-        const results = new Map();
-        for (let index = 0; index < this.rolls; index++) {
-            results.set(index, this.getValueSync());
-        }
-        this.setResults(results);
-        this.applyModifiers();
 
-        if (this.conditions?.length) this.applyConditions();
-        return [...results.values()];
-    }
     async roll(): Promise<void> {
         this.results = new Map();
         this.shapes = new Map();
@@ -476,6 +466,7 @@ export class DiceRoller implements RenderableDice<number> {
         await this.applyModifiers();
         if (this.conditions?.length) this.applyConditions();
     }
+
     async #roll() {
         const results = new Map();
         if (this.static) {
@@ -505,6 +496,71 @@ export class DiceRoller implements RenderableDice<number> {
         }
 
         return results;
+    }
+
+    async rollSilent(): Promise<void> {
+        this.results = new Map();
+        this.shapes = new Map();
+        const results = await this.#rollSilent();
+
+        this.setResults(results);
+        await this.applyModifiers();
+        if (this.conditions?.length) this.applyConditions();
+    }
+
+    async #rollSilent() {
+        const results = new Map();
+        if (this.static) {
+            results.set(0, Number(this.dice));
+        } else {
+            const promises = [];
+            for (let index = 0; index < this.rolls; index++) {
+                promises.push(
+                    new Promise<void>(async (resolve, reject) => {
+                        this.#controller?.signal.addEventListener(
+                            "abort",
+                            () => {
+                                reject();
+                            }
+                        );
+                        const value = await this.getValue(
+                            this.getShapes(index)
+                        );
+                        results.set(index, value);
+                        resolve();
+                    })
+                );
+            }
+            try {
+                await Promise.all(promises);
+            } catch (e) {}
+        }
+
+        return results;
+    }
+
+    rollSilentSync() {
+        const results = new Map();
+        for (let index = 0; index < this.rolls; index++) {
+            results.set(index, this.getValueSync());
+        }
+        this.setResults(results);
+        this.applyModifiers();
+
+        if (this.conditions?.length) this.applyConditions();
+        return [...results.values()];
+    }
+
+    rollSync() {
+        const results = new Map();
+        for (let index = 0; index < this.rolls; index++) {
+            results.set(index, this.getValueSync());
+        }
+        this.setResults(results);
+        this.applyModifiers();
+
+        if (this.conditions?.length) this.applyConditions();
+        return [...results.values()];
     }
 
     applyConditions() {

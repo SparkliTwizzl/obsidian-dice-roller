@@ -6,6 +6,8 @@ export interface RenderableDice<T> {
     getType(): RenderTypes;
 
     roll(): Promise<void>;
+    rollSilent(): Promise<void>;
+    rollSilentSync(): void;
     rollSync(): void;
 
     render(abortController: AbortController): Promise<void>;
