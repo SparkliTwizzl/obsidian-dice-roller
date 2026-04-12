@@ -23,6 +23,7 @@ import { Icons } from "src/utils/icons";
 import { Lexer } from "src/lexer/lexer";
 import { ButtonPosition } from "./settings.types";
 import { DiceRenderer } from "src/renderer/renderer";
+import { CHAINED_ROLL_DELIMITER } from "src/utils/constants";
 
 declare var require: (id: "get-fonts") => { getFonts: () => Promise<string[]> };
 
@@ -43,10 +44,12 @@ export default class SettingTab extends PluginSettingTab {
     iconsEl: HTMLDivElement;
     contentEl: HTMLDivElement;
     pathsEl: HTMLDivElement;
+
     constructor(app: App, public plugin: DiceRoller) {
         super(app, plugin);
         this.plugin = plugin;
     }
+
     async getFonts() {
         let fonts: string[] = [];
         try {
@@ -72,6 +75,7 @@ export default class SettingTab extends PluginSettingTab {
 
         return [...fontSet].sort();
     }
+
     async display(): Promise<void> {
         let { containerEl } = this;
 
@@ -90,6 +94,11 @@ export default class SettingTab extends PluginSettingTab {
             })
         );
         this.buildDice(
+            this.contentEl.createEl("details", {
+                cls: "dice-roller-nested-settings"
+            })
+        );
+        this.buildChainedRolls(
             this.contentEl.createEl("details", {
                 cls: "dice-roller-nested-settings"
             })
@@ -145,9 +154,11 @@ export default class SettingTab extends PluginSettingTab {
             }
         });
     }
+
     buildGenerics(containerEl: HTMLDivElement) {
         containerEl.empty();
     }
+
     #buildSummary(containerEl: HTMLDetailsElement, name: string) {
         const summary = containerEl.createEl("summary");
         new Setting(summary).setHeading().setName(name);
@@ -157,6 +168,7 @@ export default class SettingTab extends PluginSettingTab {
             Icons.COLLAPSE
         );
     }
+
     buildDisplay(containerEl: HTMLDetailsElement) {
         containerEl.empty();
         this.#buildSummary(containerEl, "Dice Display");
@@ -214,6 +226,7 @@ export default class SettingTab extends PluginSettingTab {
                 });
             });
     }
+
     buildDice(containerEl: HTMLDetailsElement) {
         containerEl.empty();
         this.#buildSummary(containerEl, "Dice Rollers");
@@ -301,6 +314,25 @@ export default class SettingTab extends PluginSettingTab {
                 });
             });
     }
+
+    buildChainedRolls(containerEl: HTMLDetailsElement) {
+        containerEl.empty();
+        this.#buildSummary(containerEl, "Chained Rolls");
+
+        new Setting(containerEl)
+            .setName("Enable Chained Rolls")
+            .setDesc(
+                `When enabled, formulas separated by the chained-roll delimiter "${CHAINED_ROLL_DELIMITER}" will be parsed and rolled sequentially.`
+            )
+            .addToggle((t) => {
+                t.setValue(this.plugin.data.enableChainRoller);
+                t.onChange(async (v) => {
+                    this.plugin.data.enableChainRoller = v;
+                    await this.plugin.saveSettings();
+                });
+            });
+    }
+
     buildTables(containerEl: HTMLDetailsElement) {
         containerEl.empty();
         this.#buildSummary(containerEl, "Table Rollers");
@@ -318,6 +350,7 @@ export default class SettingTab extends PluginSettingTab {
                 });
             });
     }
+
     buildSections(containerEl: HTMLDetailsElement) {
         containerEl.empty();
         this.#buildSummary(containerEl, "Section Rollers");
@@ -347,6 +380,7 @@ export default class SettingTab extends PluginSettingTab {
                 });
             });
     }
+
     buildTags(containerEl: HTMLDetailsElement) {
         containerEl.empty();
         this.#buildSummary(containerEl, "Tag Rollers");
@@ -364,6 +398,7 @@ export default class SettingTab extends PluginSettingTab {
                 });
             });
     }
+
     buildNarrative(containerEl: HTMLDetailsElement) {
         containerEl.empty();
         this.#buildSummary(containerEl, "Narrative Rollers");
@@ -395,7 +430,7 @@ export default class SettingTab extends PluginSettingTab {
                 });
             });
     }
-    
+
     buildView(containerEl: HTMLDetailsElement) {
         containerEl.empty();
         this.#buildSummary(containerEl, "Dice Tray");
@@ -422,6 +457,7 @@ export default class SettingTab extends PluginSettingTab {
         this.iconsEl = containerEl.createDiv("dice-icons");
         this.buildIcons();
     }
+
     buildIcons() {
         this.iconsEl.empty();
         if (!this.plugin.data.icons) {
@@ -482,6 +518,7 @@ export default class SettingTab extends PluginSettingTab {
         });
         toAdd.shape = drop.getValue() as IconShapes;
     }
+
     buildStaticIcon(rowEl: HTMLElement, index: number) {
         rowEl.empty();
         rowEl.removeClass("add-new");
@@ -506,6 +543,7 @@ export default class SettingTab extends PluginSettingTab {
                 this.buildIcons();
             });
     }
+
     buildEditIcon(rowEl: HTMLElement, index: number, instance: DiceIcon) {
         rowEl.empty();
         rowEl.addClass("add-new");
@@ -561,6 +599,7 @@ export default class SettingTab extends PluginSettingTab {
             toAdd.shape = v as IconShapes;
         });
     }
+
     buildRender(containerEl: HTMLDetailsElement) {
         containerEl.empty();
         this.#buildSummary(containerEl, "Graphical Dice");
@@ -797,6 +836,7 @@ export default class SettingTab extends PluginSettingTab {
             });
         }
     }
+
     async buildFormulaForm(
         el: HTMLElement,
         temp: DiceFormula = {
@@ -837,11 +877,13 @@ export default class SettingTab extends PluginSettingTab {
                 );
         });
     }
+
     #needsSort = true;
     allFolders = this.app.vault
         .getAllLoadedFiles()
         .filter((f) => f instanceof TFolder);
     folders: TFolder[] = [];
+
     buildDiceModTemplateFoldersSettings(containerEl: HTMLDetailsElement) {
         containerEl.empty();
         this.#buildSummary(containerEl, "Modify Dice");
@@ -911,6 +953,7 @@ export default class SettingTab extends PluginSettingTab {
         );
         this.buildPaths();
     }
+
     buildPaths() {
         if (this.#needsSort) {
             //sort data
@@ -949,6 +992,7 @@ export default class SettingTab extends PluginSettingTab {
         }
         this.buildEditPath(nested.createDiv());
     }
+
     buildStaticPath(rowEl: HTMLElement, folder: string) {
         rowEl.empty();
         const useSubfolders = this.plugin.data.diceModTemplateFolders[folder];
@@ -985,6 +1029,7 @@ export default class SettingTab extends PluginSettingTab {
                 })
             );
     }
+
     buildEditPath(rowEl: HTMLElement, folder?: string) {
         rowEl.empty();
         const temp: DiceModTemplateFolder = {
@@ -1049,6 +1094,7 @@ export default class SettingTab extends PluginSettingTab {
             folder
         );
     }
+
     buildPathInput(
         inputEl: HTMLElement,
         addButton: ExtraButtonComponent,
