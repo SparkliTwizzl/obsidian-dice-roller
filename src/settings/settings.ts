@@ -23,7 +23,7 @@ import { Icons } from "src/utils/icons";
 import { Lexer } from "src/lexer/lexer";
 import { ButtonPosition } from "./settings.types";
 import { DiceRenderer } from "src/renderer/renderer";
-import { CHAINED_ROLL_DELIMITER } from "src/utils/constants";
+import { CHAINED_RESULT_SEPARATOR, CHAINED_ROLL_DELIMITER } from "src/utils/constants";
 
 declare var require: (id: "get-fonts") => { getFonts: () => Promise<string[]> };
 
@@ -328,6 +328,19 @@ export default class SettingTab extends PluginSettingTab {
                 t.setValue(this.plugin.data.enableChainRoller);
                 t.onChange(async (v) => {
                     this.plugin.data.enableChainRoller = v;
+                    await this.plugin.saveSettings();
+                });
+            });
+
+        new Setting(containerEl)
+            .setName("Chained Result Separator")
+            .setDesc(
+                `String inserted between chained roll results (defaults to "${CHAINED_RESULT_SEPARATOR}").`
+            )
+            .addText((t) => {
+                t.setValue(this.plugin.data.chainedResultSeparator ?? CHAINED_RESULT_SEPARATOR);
+                t.onChange(async (v) => {
+                    this.plugin.data.chainedResultSeparator = v;
                     await this.plugin.saveSettings();
                 });
             });

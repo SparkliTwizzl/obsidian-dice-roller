@@ -51,4 +51,5 @@ export interface DiceRollerSettings {
     version: string | null;
     viewResults: ViewResult[];
     enableChainRoller?: boolean;
+    chainedResultSeparator?: string;
 }

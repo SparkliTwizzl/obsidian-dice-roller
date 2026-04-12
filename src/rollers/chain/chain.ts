@@ -1,7 +1,7 @@
 import { BasicRoller, type RenderableRoller } from "src/rollers/roller";
 import type { DiceRollerSettings } from "src/settings/settings.types";
 import type { App } from "obsidian";
-import { CHAIN_RESULT_SEPARATOR } from "src/utils/constants";
+import { CHAINED_RESULT_SEPARATOR } from "src/utils/constants";
 
 export class ChainRoller extends BasicRoller {
     result: string;
@@ -32,7 +32,8 @@ export class ChainRoller extends BasicRoller {
             }
             subResults.push(textResult);
         }
-        return subResults.join(`${CHAIN_RESULT_SEPARATOR} `);
+        const separator = (this.data && (this.data as any).chainedResultSeparator) ?? CHAINED_RESULT_SEPARATOR;
+        return subResults.join(`${separator} `);
     }
 
     constructor(
