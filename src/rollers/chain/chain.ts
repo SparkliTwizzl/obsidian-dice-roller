@@ -1,11 +1,13 @@
-import { BasicRoller } from "src/rollers/roller";
+import { BasicRoller, type RenderableRoller } from "src/rollers/roller";
 import type { DiceRollerSettings } from "src/settings/settings.types";
+import type { App } from "obsidian";
 import { CHAIN_RESULT_SEPARATOR } from "src/utils/constants";
 
 export class ChainRoller extends BasicRoller {
     result: string;
     shouldShowFormula: boolean = false;
     subRollers: BasicRoller[] = [];
+    app: App;
 
     private async executeRoll() {
         let subResults = [];
@@ -20,10 +22,12 @@ export class ChainRoller extends BasicRoller {
         data: DiceRollerSettings,
         original: string,
         subRollers: BasicRoller[],
+        app: App,
         position = data.position
     ) {
         super(data, original, [] as any, position);
         this.subRollers = subRollers;
+        this.app = app;
     }
 
     addContexts(...components: any[]) {
@@ -53,11 +57,25 @@ export class ChainRoller extends BasicRoller {
         this.result = await this.executeRoll();
         this.render();
         this.trigger("new-result");
+
+        // Create a thin wrapper that exposes only the members listeners use.
+        const wrapper: Partial<RenderableRoller<any>> = {
+            getSource: () => (typeof (this as any).getSource === "function" ? (this as any).getSource() : ""),
+            getResultText: () => (this as any).getResultText?.() ?? `${this.result}`,
+            getTooltip: () => this.getTooltip(),
+            original: (this as any).original
+        };
+        this.app.workspace.trigger("dice-roller:new-result", wrapper as RenderableRoller<any>);
+
         return this.result;
     }
 
     async rollSilent() {
         this.result = await this.executeRoll()
         return this.result;
+    }
+
+    getResultText(): string {
+        return `${this.result}`;
     }
 }

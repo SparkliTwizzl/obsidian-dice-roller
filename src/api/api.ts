@@ -249,7 +249,7 @@ class APIInstance {
                 }
                 rollers.push(roller);
             }
-            return new ChainRoller(this.data, content, rollers, position);
+            return new ChainRoller(this.data, content, rollers, this.app, position);
         }
 
         const lexemeResult = Lexer.parse(content);
