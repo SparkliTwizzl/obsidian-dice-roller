@@ -50,4 +50,5 @@ export interface DiceRollerSettings {
     replaceDiceModInLivePreview: boolean;
     version: string | null;
     viewResults: ViewResult[];
+    enableChainRoller?: boolean;
 }

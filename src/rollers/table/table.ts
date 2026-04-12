@@ -214,7 +214,7 @@ export class TableRoller extends GenericFileRoller<string> {
                 }
                 subRoller.addContexts(...this.components);
                 // Roll it
-                await subRoller.rollSilent();
+                await (subRoller as any).callSilent();
                 // Get sub result
                 const rollerResult = await this.getSubResult(subRoller.result);
 
@@ -358,7 +358,7 @@ export class TableRoller extends GenericFileRoller<string> {
                     }
                     const rollsRoller = roller as StackRoller;
                     rollsRoller.addContexts(...this.components);
-                    await rollsRoller.rollSilent();
+                    await (rollsRoller as any).callSilent();
                     this.rolls = rollsRoller.result;
                     if (!rollsRoller.isStatic) {
                         formula = formula.replace(
@@ -380,7 +380,7 @@ export class TableRoller extends GenericFileRoller<string> {
             let selectedOption: string = "";
 
             if (this.isLookup) {
-                const result = await this.lookupRoller.rollSilent();
+                const result = await (this.lookupRoller as any).callSilent();
                 const option = this.lookupRanges.find(
                     ([range]) =>
                         (range[1] === undefined && result === range[0]) ||

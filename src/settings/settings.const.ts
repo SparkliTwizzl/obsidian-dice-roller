@@ -38,6 +38,7 @@ export const DEFAULT_SETTINGS: DiceRollerSettings = {
     showRenderNotice: true,
     diceModTemplateFolders: {},
     replaceDiceModInLivePreview: true,
+    enableChainRoller: false,
     version: null,
     viewResults: []
 };

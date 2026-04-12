@@ -10,15 +10,14 @@ import { Lexer, type LexicalToken } from "../lexer/lexer";
 import type { App } from "obsidian";
 
 import { DataviewManager } from "./api.dataview";
-import { None, Some, type Option } from "@sniptt/monads";
+import { ChainRoller } from "src/rollers/chain/chain";
+import { NarrativeStackRoller } from "src/rollers/dice/narrative";
 import { StackRoller } from "src/rollers/dice/stack";
-import { TableRoller } from "src/rollers/table/table";
+import { LineRoller } from "src/rollers/line/line";
 import { SectionRoller } from "src/rollers/section/section";
 import { DataViewRoller, TagRoller } from "src/rollers/tag/tag";
-import { LineRoller } from "src/rollers/line/line";
-import { NarrativeStackRoller } from "src/rollers/dice/narrative";
-import { CHAIN_ROLL_DELIMITER } from "src/utils/constants";
-import { ChainRoller } from "src/rollers/chain/chain";
+import { TableRoller } from "src/rollers/table/table";
+import { CHAINED_ROLL_DELIMITER } from "src/utils/constants";
 
 export * from "../types/api";
 
@@ -234,8 +233,9 @@ class APIInstance {
             lookup
         } = this.getParametersForRoller(raw, options);
 
-        if (content.includes(CHAIN_ROLL_DELIMITER)) {
-            let segments = content.split(CHAIN_ROLL_DELIMITER);
+        // Only parse chained-dice-roll formulas when the feature is enabled.
+        if (this.data.enableChainRoller && content.includes(CHAINED_ROLL_DELIMITER)) {
+            let segments = content.split(CHAINED_ROLL_DELIMITER);
             const rollers: BasicRoller[] = [];
             for (let i = 0; i < segments.length; ++i) {
                 let segment = segments[i].trim();

@@ -1,3 +1,4 @@
+import { API } from "src/api/api";
 import type { LexicalToken } from "src/lexer/lexer";
 import { DiceRoller } from "./dice";
 import { RenderTypes } from "./renderable";
@@ -50,7 +51,11 @@ export class PercentRoller extends DiceRoller {
 
     async rollSilent() {
         if (!this.stack || !this.stack.length) return super.rollSilent();
-        this.stack.forEach((stack) => stack.map((dice) => dice.rollSilent()));
+        this.stack.forEach((stack) =>
+            stack.map((dice) =>
+                API?.data?.enableChainRoller ? dice.rollSilent() : dice.roll()
+            )
+        );
     }
 
     allowAverage(): boolean {

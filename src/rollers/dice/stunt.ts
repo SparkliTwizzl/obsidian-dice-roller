@@ -1,3 +1,4 @@
+import { API } from "src/api/api";
 import type { LexicalToken } from "src/lexer/lexer";
 import { DiceRoller } from "./dice";
 import { RenderTypes } from "./renderable";
@@ -43,12 +44,12 @@ export class StuntRoller extends DiceRoller {
         await Promise.all([
             new Promise<void>(async (resolve) => {
                 this.pair.shouldRender = this.shouldRender;
-                await this.pair.rollSilent();
+                await (API?.data?.enableChainRoller ? this.pair.rollSilent() : this.pair.roll());
                 resolve();
             }),
             new Promise<void>(async (resolve) => {
                 this.stunt.shouldRender = this.shouldRender;
-                await this.stunt.rollSilent();
+                await (API?.data?.enableChainRoller ? this.stunt.rollSilent() : this.stunt.roll());
                 resolve();
             })
         ]);
