@@ -17,6 +17,8 @@ import { SectionRoller } from "src/rollers/section/section";
 import { DataViewRoller, TagRoller } from "src/rollers/tag/tag";
 import { LineRoller } from "src/rollers/line/line";
 import { NarrativeStackRoller } from "src/rollers/dice/narrative";
+import { CHAIN_ROLL_DELIMITER } from "src/utils/constants";
+import { ChainRoller } from "src/rollers/chain/chain";
 
 export * from "../types/api";
 
@@ -49,6 +51,7 @@ declare global {
         DiceRoller: APIInstance;
     }
 }
+
 declare module "obsidian" {
     interface Workspace {
         on(
@@ -72,6 +75,7 @@ declare module "obsidian" {
         on(name: "dice-roller:unloaded", callback: () => void): EventRef;
     }
 }
+
 class APIInstance {
     app: App;
     data: DiceRollerSettings;
@@ -229,6 +233,24 @@ class APIInstance {
             signed,
             lookup
         } = this.getParametersForRoller(raw, options);
+
+        if (content.includes(CHAIN_ROLL_DELIMITER)) {
+            let segments = content.split(CHAIN_ROLL_DELIMITER);
+            const rollers: BasicRoller[] = [];
+            for (let i = 0; i < segments.length; ++i) {
+                let segment = segments[i].trim();
+                if (segment === "") {
+                    continue;
+                }
+                let roller = this.getRoller(segment, source);
+                if (!roller) {
+                    console.error(`\`${segment}\` is not a valid dice roll.`);
+                    return null;
+                }
+                rollers.push(roller);
+            }
+            return new ChainRoller(this.data, content, rollers, position);
+        }
 
         const lexemeResult = Lexer.parse(content);
 
