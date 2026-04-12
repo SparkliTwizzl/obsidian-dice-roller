@@ -12,8 +12,25 @@ export class ChainRoller extends BasicRoller {
     private async executeRoll() {
         let subResults = [];
         for (let i = 0; i < this.subRollers.length; ++i) {
-            let subResult = await this.subRollers[i].rollSilent();
-            subResults.push(subResult);
+            const subRoller = this.subRollers[i] as any;
+            const subResult = await subRoller.rollSilent?.() ?? await this.subRollers[i].rollSilent();
+            let textResult: string;
+            try {
+                if (typeof subResult === "string") {
+                    textResult = subResult;
+                } else if (typeof subRoller.getResultText === "function") {
+                    textResult = subRoller.getResultText();
+                } else if (typeof subRoller.transformResultsToString === "function") {
+                    textResult = subRoller.transformResultsToString();
+                } else if (subRoller && typeof subRoller.result === "string") {
+                    textResult = subRoller.result as string;
+                } else {
+                    textResult = JSON.stringify(subResult);
+                }
+            } catch(e) {
+                textResult = String(subResult);
+            }
+            subResults.push(textResult);
         }
         return subResults.join(`${CHAIN_RESULT_SEPARATOR} `);
     }
