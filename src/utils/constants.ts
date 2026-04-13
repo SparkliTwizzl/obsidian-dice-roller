@@ -7,7 +7,7 @@ export const DICE_REGEX = /(?<dice>(?<roll>\d+)(?:[Dd]?\[?(?:-?\d+\s?,)?\s?(?:-?
 export const MATH_REGEX = /[\(\^\+\-\*\/\)]/;
 export const OMITTED_REGEX = /(?<roll>\d+)?[Dd](?<faces>\[?(?:-?\d+\s?,)?\s?(?:-?\d+|%|F)\]?)?(?<conditional>(?:(?:=|=!|<|>|<=|>=|=<|=>|\-=|=\-)\d+)*)?/;
 export const ROLL_ALIAS_INDICATOR = "@";
-export const ROLL_ALIAS_REGEX = /^\s*@"([\s\S]*?)"\s*$/s;
+export const ROLL_ALIAS_REGEX = new RegExp(`${ROLL_ALIAS_INDICATOR}"([\\s\\S]*?)"\\s*$`, 's');
 export const SECTION_REGEX = /(?:(?<roll>\d+)[Dd])?(?:\[.*\]\(|\[\[)(?<link>.+)(?:\]\]|\))\|?(?<types>.+)?/;
 export const TABLE_REGEX = /(?<diceRoll>.*)?(?:\[.*\]\(|\[\[)(?<link>.+?)#?\^(?<block>.+?)(?:\]\]|\))(?:\|(?<header>.+))?/;
 export const TAG_REGEX = /(?:(?<roll>\d+)[Dd])?#(?<query>[\p{Letter}\p{Emoji_Presentation}\w/-]+)(?:\|(?<collapse>[\+-]))?(?:\|(?<types>[^\+-]+))?/u;

@@ -17,7 +17,12 @@ import { LineRoller } from "src/rollers/line/line";
 import { SectionRoller } from "src/rollers/section/section";
 import { DataViewRoller, TagRoller } from "src/rollers/tag/tag";
 import { TableRoller } from "src/rollers/table/table";
-import { CHAINED_RESULT_SEPARATOR_OVERRIDE_REGEX, CHAINED_ROLL_DELIMITER } from "src/utils/constants";
+import {
+    CHAINED_RESULT_SEPARATOR_OVERRIDE_REGEX,
+    CHAINED_ROLL_DELIMITER,
+    ROLL_ALIAS_INDICATOR,
+    ROLL_ALIAS_REGEX
+} from "src/utils/constants";
 
 export * from "../types/api";
 
@@ -221,7 +226,7 @@ class APIInstance {
         options: RollerOptions = this.getRollerOptions(this.data)
     ): BasicRoller | null {
         const {
-            content,
+            content: rawContent,
             position,
             showParens,
             showFormula,
@@ -233,17 +238,34 @@ class APIInstance {
             lookup
         } = this.getParametersForRoller(raw, options);
 
+        let content = rawContent;
         // Only parse chained-dice-roll formulas when the feature is enabled.
         if (this.data.enableChainRoller && content.includes(CHAINED_ROLL_DELIMITER)) {
             let segments = content.split(CHAINED_ROLL_DELIMITER);
 
-            // If the final non-empty segment is of the form ~"text",
-            // treat it as an override for the chained result separator
-            // and do not treat it as a sub-roll.
+            // If roll aliasing is enabled, check if the final non-empty segment contains an alias for the chain.
+            let rollAlias: string | undefined;
+            if (this.data.enableRollAliasing && content.includes(ROLL_ALIAS_INDICATOR))
+            for (let i = segments.length - 1; i >= 0; --i) {
+                const candidate = segments[i].trim();
+                if (candidate === "") {
+                    continue;
+                }
+                const m = candidate.match(ROLL_ALIAS_REGEX);
+                if (m) {
+                    rollAlias = m[1];
+                    segments.splice(i, 1);
+                }
+                break;
+            }
+
+            // Check the final non-empty segment for an override for the chained result separator and do not treat it as a sub-roll.
             let overrideSeparator: string | undefined;
             for (let i = segments.length - 1; i >= 0; --i) {
                 const candidate = segments[i].trim();
-                if (candidate === "") continue;
+                if (candidate === "") {
+                    continue;
+                }
                 const m = candidate.match(CHAINED_RESULT_SEPARATOR_OVERRIDE_REGEX);
                 if (m) {
                     overrideSeparator = m[1];
@@ -270,7 +292,25 @@ class APIInstance {
                 ? Object.assign({}, this.data, { chainedResultSeparator: overrideSeparator })
                 : this.data;
 
-            return new ChainRoller(chainData, content, rollers, this.app, position);
+            let roller = new ChainRoller(chainData, content, rollers, this.app, position);
+            if (rollAlias) {
+                roller.setRollAlias(rollAlias);
+            }
+            return roller;
+        }
+        
+        // If roll aliasing is enabled, check if the formula contains an alias.
+        let rollAlias: string | undefined;
+        if (this.data.enableRollAliasing && content.includes(ROLL_ALIAS_INDICATOR)) {
+            const m = content.match(ROLL_ALIAS_REGEX);
+            if (m) {
+                rollAlias = m[1]
+                    .replace(/\\\"/g, "{ESCAPED_QUOTE}")
+                    .replace(/\"/g, "")
+                    .replace(/{ESCAPED_QUOTE}/g, "\"")
+                    .trim();
+                content = content.slice(0, content.length - m[0].length).trim();
+            }
         }
 
         const lexemeResult = Lexer.parse(content);
@@ -284,13 +324,17 @@ class APIInstance {
         const type = this.#getTypeFromLexemes(lexemes);
         switch (type) {
             case "narrative": {
-                return new NarrativeStackRoller(
+                const roller = new NarrativeStackRoller(
                         this.data,
                         content,
                         lexemes,
                         this.app,
                         position
                     );
+                if (rollAlias) {
+                    roller.setRollAlias(rollAlias);
+                }
+                return roller;
             }
             case "dice": {
                 const roller = new StackRoller(
@@ -308,8 +352,10 @@ class APIInstance {
                 roller.showFormula = showFormula;
                 roller.shouldRender = shouldRender;
                 roller.showRenderNotice = this.data.showRenderNotice;
-
                 roller.setSource(source);
+                if (rollAlias) {
+                    roller.setRollAlias(rollAlias);
+                }
                 return roller;
             }
             case "table": {
@@ -322,10 +368,13 @@ class APIInstance {
                     position,
                     lookup
                 );
+                if (rollAlias) {
+                    roller.setRollAlias(rollAlias);
+                }
                 return roller;
             }
             case "section": {
-                return new SectionRoller(
+                const roller = new SectionRoller(
                     this.data,
                     content,
                     lexemes[0],
@@ -333,6 +382,10 @@ class APIInstance {
                     this.app,
                     position
                 );
+                if (rollAlias) {
+                    roller.setRollAlias(rollAlias);
+                }
+                return roller;
             }
             case "dataview": {
                 if (!DataviewManager.canUseDataview) {
@@ -340,7 +393,7 @@ class APIInstance {
                         "Tags are only supported with the Dataview plugin installed."
                     );
                 }
-                return new DataViewRoller(
+                const roller = new DataViewRoller(
                     this.data,
                     content,
                     lexemes[0],
@@ -348,6 +401,10 @@ class APIInstance {
                     this.app,
                     position
                 );
+                if (rollAlias) {
+                    roller.setRollAlias(rollAlias);
+                }
+                return roller;
             }
             case "tag": {
                 if (!DataviewManager.canUseDataview) {
@@ -355,7 +412,7 @@ class APIInstance {
                         "Tags are only supported with the Dataview plugin installed."
                     );
                 }
-                return new TagRoller(
+                const roller = new TagRoller(
                     this.data,
                     content,
                     lexemes[0],
@@ -363,9 +420,13 @@ class APIInstance {
                     this.app,
                     position
                 );
+                if (rollAlias) {
+                    roller.setRollAlias(rollAlias);
+                }
+                return roller;
             }
             case "line": {
-                return new LineRoller(
+                const roller = new LineRoller(
                     this.data,
                     content,
                     lexemes[0],
@@ -373,6 +434,10 @@ class APIInstance {
                     this.app,
                     position
                 );
+                if (rollAlias) {
+                    roller.setRollAlias(rollAlias);
+                }
+                return roller;
             }
         }
     }

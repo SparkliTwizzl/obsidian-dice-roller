@@ -141,6 +141,11 @@ abstract class BareRoller<T> extends Roller<T> {
     containerEl: HTMLSpanElement;
     resultEl: HTMLSpanElement;
     iconEl: HTMLSpanElement;
+
+    setRollAlias(alias: string) {
+        this.rollAlias = alias ?? undefined;
+    }
+
     setTooltip() {
         if (this.data.displayResultsInline) return;
         this.containerEl.setAttrs({
