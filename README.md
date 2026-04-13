@@ -503,11 +503,41 @@ To return multiple elements, use:
 
 Once in preview mode, you may <kbd>Ctrl</kbd> - click on the result to open the block reference in a new pane.
 
+# Chained Rolls
+
+If enabled, multiple dice rolls can be chained in a single formula.
+
+All roller types are supported.
+
+To chain rolls, separate them with semicolons ("`;`"):
+
+`` `dice: <dice-roll-1>; <dice-roll-2>; <dice-roll-3>` ``
+
+Each dice roll will be evaluated separately, then all results will be displayed in a list.
+
+By default, chained roll results are separated by a semicolon followed by a space ("`; `"):
+
+`` `<roll-result-1>; <roll-result-2>; <roll-result-3>` ``
+
+The default result separator can be changed in settings.
+
+The result separator can also be overridden for a single formula by adding another segment to the end of the formula in the format `~"text"`, where the text in quotes is used as the result separator:
+
+`` `dice: <dice-roll-1>; <dice-roll-2>; ~" / "` `` => `` `<roll-result-1> / <roll-result-2>` ``
+
+Chained rolls can also be used with `dice-mod` rolls.
+
+By default, newline characters (`\n`, `\r`) in a result separator do not add line breaks for `dice-mod` rolls and are instead interpreted as literal text.
+
+This can be changed in settings, but be aware that enabling line breaks in result separators for chained `dice-mod` rolls can lead to note layouts changing unexpectedly.
+
 # Tooltip
 
 The result in preview mode has a tooltip that will appear when you hover over it.
 
 It displays the formula used to calculate the result on the top line, and displays the calculated rolls on the bottom line.
+
+If chained rolls are enabled, all rolls' tooltips are bundled together into a single tooltip.
 
 # Saving Results
 
