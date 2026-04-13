@@ -120,7 +120,7 @@ abstract class BareRoller<T> extends Roller<T> {
 
         this.containerEl.onclick = this.onClick.bind(this);
     }
-    formulaAlias?: string;
+    rollAlias?: string;
     rolls: number;
     loaded: boolean = false;
     onLoad(callback: () => void) {
@@ -202,19 +202,6 @@ export abstract class BasicRoller<T = any> extends BareRoller<T> {
         public position = data.position
     ) {
         super(data, original, position);
-    }
-
-    // Helper that respects the feature flag: if silent rolls are disabled,
-    // fall back to the normal `roll` implementation.
-    async callSilent(render?: boolean): Promise<any> {
-        if (this.data?.enableChainRoller) {
-            // Prefer the silent variant if present
-            // @ts-ignore allow calling subclass implementation
-            return await (this as any).rollSilent?.(render);
-        }
-        // Fallback to regular roll
-        // @ts-ignore allow calling subclass implementation
-        return await (this as any).roll?.(render);
     }
 }
 

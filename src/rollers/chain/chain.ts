@@ -13,7 +13,7 @@ export class ChainRoller extends BasicRoller {
         let subResults = [];
         for (let i = 0; i < this.subRollers.length; ++i) {
             const subRoller = this.subRollers[i] as any;
-            const subResult = await (subRoller.callSilent?.() ?? (this.subRollers[i] as any).callSilent?.());
+            const subResult = await subRoller.rollSilent();
             let textResult: string;
             try {
                 if (typeof subResult === "string") {
