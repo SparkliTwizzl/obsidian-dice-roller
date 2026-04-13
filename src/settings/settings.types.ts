@@ -52,4 +52,5 @@ export interface DiceRollerSettings {
     viewResults: ViewResult[];
     enableChainRoller?: boolean;
     chainedResultSeparator?: string;
+    allowChainedSeparatorLineBreaks?: boolean;
 }

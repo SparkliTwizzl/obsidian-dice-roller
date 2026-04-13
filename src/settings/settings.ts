@@ -322,7 +322,7 @@ export default class SettingTab extends PluginSettingTab {
         new Setting(containerEl)
             .setName("Enable Chained Rolls")
             .setDesc(
-                `When enabled, formulas separated by the chained-roll delimiter "${CHAINED_ROLL_DELIMITER}" will be parsed and rolled sequentially.`
+                `When enabled, formulas separated by the chained roll delimiter "${CHAINED_ROLL_DELIMITER}" will be parsed and rolled sequentially.`
             )
             .addToggle((t) => {
                 t.setValue(this.plugin.data.enableChainRoller);
@@ -341,6 +341,19 @@ export default class SettingTab extends PluginSettingTab {
                 t.setValue(this.plugin.data.chainedResultSeparator ?? CHAINED_RESULT_SEPARATOR);
                 t.onChange(async (v) => {
                     this.plugin.data.chainedResultSeparator = v;
+                    await this.plugin.saveSettings();
+                });
+            });
+
+        new Setting(containerEl)
+            .setName("Allow Line Breaks In Chained dice-mod Results (CAUTION)")
+            .setDesc(
+                "Allow the chained result separator to insert actual line breaks in inline replacers. WARNING: Enabling this is risky, as it may cause dice-mod rolls to change the layout of notes unexpectedly."
+            )
+            .addToggle((t) => {
+                t.setValue((this.plugin.data as any).allowChainedSeparatorLineBreaks ?? false);
+                t.onChange(async (v) => {
+                    (this.plugin.data as any).allowChainedSeparatorLineBreaks = v;
                     await this.plugin.saveSettings();
                 });
             });

@@ -45,12 +45,21 @@ export class ChainRoller extends BasicRoller {
         // Display joiner: decoded separator, with a space unless it contains a newline.
         const displayJoiner = decodedSeparator.includes("\n") ? decodedSeparator : `${decodedSeparator} `;
 
-        // Inline joiner: preserve literal text for inline replacers. If the raw contains
-        // actual newline characters, escape them to a printable representation.
+        // Inline joiners by default preserve literal text for inline replacers and
+        // escape any actual newline/tab characters to printable representations.
         const escapeActual = (s: string) =>
             s.replace(/\r/g, "\\r").replace(/\n/g, "\\n").replace(/\t/g, "\\t");
-        const inlineSeparator = rawSeparator.includes("\n") || rawSeparator.includes("\r") || rawSeparator.includes("\t") ? escapeActual(rawSeparator) : rawSeparator;
-        const inlineJoiner = `${inlineSeparator} `;
+
+        const allowLineBreaks = (this.data && (this.data as any).allowChainedSeparatorLineBreaks) ?? false;
+
+        let inlineJoiner: string;
+        if (allowLineBreaks) {
+            inlineJoiner = displayJoiner;
+        } else {
+            const shouldEscapeActual = rawSeparator.includes("\n") || rawSeparator.includes("\r") || rawSeparator.includes("\t");
+            const inlineSeparator = shouldEscapeActual ? escapeActual(rawSeparator) : rawSeparator;
+            inlineJoiner = `${inlineSeparator} `;
+        }
 
         const inlineResult = subResults.join(inlineJoiner);
         const displayResult = subResults.join(displayJoiner);
@@ -99,8 +108,10 @@ export class ChainRoller extends BasicRoller {
     async getReplacer() {
         let inline = this.shouldShowFormula ? `${this.inlineText} ` : "";
         const inlineText = (this as any)._chainedInlineResult ?? this.result ?? "";
-        // Ensure any accidental real newlines are represented as literal escapes in inline replacers.
-        const normalized = inlineText.replace(/\r/g, "\\r").replace(/\n/g, "\\n");
+        // Ensure accidental real newlines are represented as literal escapes in
+        // inline replacers unless the user explicitly allows line breaks.
+        const allowLineBreaks = (this.data && (this.data as any).allowChainedSeparatorLineBreaks) ?? false;
+        const normalized = allowLineBreaks ? inlineText : inlineText.replace(/\r/g, "\\r").replace(/\n/g, "\\n");
         return `${inline}${normalized}`;
     }
 
