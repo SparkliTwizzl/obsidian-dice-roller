@@ -1,7 +1,6 @@
 import { vi, test, expect } from "vitest";
 import { Lexer } from "../../src/lexer/lexer";
 import { toLexicalToken } from "../util";
-import { Ok } from "@sniptt/monads";
 
 /**
  * possible formats:
@@ -657,6 +656,12 @@ test('Lexer should parse "[[Note^block-id]]|Header 2', () => {
 });
 
 // FORMULAS ===================================================================
+
+test('Lexer should parse "-1d6 + 1d4" like "0 - 1d6 + 1d4"', () => {
+    let a = Lexer.parse("-1d6 + 1d4").unwrap().map(toLexicalToken);
+    let b = Lexer.parse("0 - 1d6 + 1d4").unwrap().map(toLexicalToken);
+    expect(a).toEqual(b);
+});
 
 test('Lexer should parse "1d20 + -2" like "1d20 - 2"', () => {
     let a = Lexer.parse("1d20 + -2").unwrap().map(toLexicalToken);
