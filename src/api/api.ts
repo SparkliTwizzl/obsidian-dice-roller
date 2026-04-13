@@ -18,8 +18,10 @@ import { SectionRoller } from "src/rollers/section/section";
 import { DataViewRoller, TagRoller } from "src/rollers/tag/tag";
 import { TableRoller } from "src/rollers/table/table";
 import {
-    CHAINED_RESULT_SEPARATOR_OVERRIDE_REGEX,
+    CHAINED_ROLL_ALIAS_REGEX,
     CHAINED_ROLL_DELIMITER,
+    RESULT_SEPARATOR_OVERRIDE_INDICATOR,
+    RESULT_SEPARATOR_OVERRIDE_REGEX,
     ROLL_ALIAS_INDICATOR,
     ROLL_ALIAS_REGEX
 } from "src/utils/constants";
@@ -239,44 +241,47 @@ class APIInstance {
         } = this.getParametersForRoller(raw, options);
 
         let content = rawContent;
-        // Only parse chained-dice-roll formulas when the feature is enabled.
-        if (this.data.enableChainRoller && content.includes(CHAINED_ROLL_DELIMITER)) {
-            let segments = content.split(CHAINED_ROLL_DELIMITER);
+        let rollAlias: string | undefined;
 
-            // If roll aliasing is enabled, check if the final non-empty segment contains an alias for the chain.
-            let rollAlias: string | undefined;
-            if (this.data.enableRollAliasing && content.includes(ROLL_ALIAS_INDICATOR))
-            for (let i = segments.length - 1; i >= 0; --i) {
-                const candidate = segments[i].trim();
-                if (candidate === "") {
-                    continue;
-                }
-                const m = candidate.match(ROLL_ALIAS_REGEX);
+        let matchRegexPreservingQuotes = (content: string, matcher: RegExp) => {
+            const m = content.match(matcher);
+            if (m) {
+                return {
+                    result: m[1]
+                        .replace(/\\\"/g, "{ESCAPED_QUOTE}")
+                        .replace(/\"/g, "")
+                        .replace(/{ESCAPED_QUOTE}/g, "\""),
+                    remainder: content.slice(0, content.length - m[0].length)
+                };
+            }
+            return null;
+        }
+
+        if (this.data.enableChainRoller && content.includes(CHAINED_ROLL_DELIMITER)) {
+            let segments = content.split(CHAINED_ROLL_DELIMITER)
+                .map(s => s.trim())
+                .filter(s => s !== "");
+
+            if (this.data.enableRollAliasing && segments.last().includes(ROLL_ALIAS_INDICATOR)) {
+                let m = matchRegexPreservingQuotes(segments.last(), ROLL_ALIAS_REGEX);
                 if (m) {
-                    rollAlias = m[1];
-                    segments.splice(i, 1);
+                    rollAlias = m.result.trim();
+                    segments[segments.length - 1] = m.remainder;
                 }
-                break;
             }
 
-            // Check the final non-empty segment for an override for the chained result separator and do not treat it as a sub-roll.
             let overrideSeparator: string | undefined;
-            for (let i = segments.length - 1; i >= 0; --i) {
-                const candidate = segments[i].trim();
-                if (candidate === "") {
-                    continue;
-                }
-                const m = candidate.match(CHAINED_RESULT_SEPARATOR_OVERRIDE_REGEX);
+            if (segments.last().includes(RESULT_SEPARATOR_OVERRIDE_INDICATOR)) {
+                let m = matchRegexPreservingQuotes(segments.last(), RESULT_SEPARATOR_OVERRIDE_REGEX);
                 if (m) {
-                    overrideSeparator = m[1];
-                    segments.splice(i, 1);
+                    overrideSeparator = m.result;
+                    segments.splice(segments.length - 1, 1);
                 }
-                break;
             }
 
             const rollers: BasicRoller[] = [];
             for (let i = 0; i < segments.length; ++i) {
-                let segment = segments[i].trim();
+                let segment = segments[i];
                 if (segment === "") {
                     continue;
                 }
@@ -299,17 +304,11 @@ class APIInstance {
             return roller;
         }
         
-        // If roll aliasing is enabled, check if the formula contains an alias.
-        let rollAlias: string | undefined;
         if (this.data.enableRollAliasing && content.includes(ROLL_ALIAS_INDICATOR)) {
-            const m = content.match(ROLL_ALIAS_REGEX);
+            let m = matchRegexPreservingQuotes(content, ROLL_ALIAS_REGEX);
             if (m) {
-                rollAlias = m[1]
-                    .replace(/\\\"/g, "{ESCAPED_QUOTE}")
-                    .replace(/\"/g, "")
-                    .replace(/{ESCAPED_QUOTE}/g, "\"")
-                    .trim();
-                content = content.slice(0, content.length - m[0].length).trim();
+                rollAlias = m.result.trim();
+                content = m.remainder;
             }
         }
 

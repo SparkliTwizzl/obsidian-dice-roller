@@ -12,6 +12,11 @@ export const RESULT_SEPARATOR = "; ";
 export const RESULT_SEPARATOR_OVERRIDE_INDICATOR = "~";
 export const ROLL_ALIAS_INDICATOR = "@";
 
-export const CHAINED_ROLL_ALIAS_REGEX = new RegExp(`/^\\s*(?:${RESULT_SEPARATOR_OVERRIDE_INDICATOR}\\s*".*?")?\\s*${ROLL_ALIAS_INDICATOR}\\s*"(.+?)"\\s*$/s`, 's');
-export const RESULT_SEPARATOR_OVERRIDE_REGEX = new RegExp(`/^${RESULT_SEPARATOR_OVERRIDE_INDICATOR}\s*"(.*?)"$/s`, 's');
-export const ROLL_ALIAS_REGEX = new RegExp(`/\\s*${ROLL_ALIAS_INDICATOR}\\s*"(.+?)"\\s*$/s`, 's');
+// export const RESULT_SEPARATOR_OVERRIDE_REGEX = new RegExp(`/^${RESULT_SEPARATOR_OVERRIDE_INDICATOR}\s*"(.*?)"$/s`, 's');
+export const RESULT_SEPARATOR_OVERRIDE_REGEX = /^~\s*"(.*?)"$/s;
+// export const ROLL_ALIAS_REGEX = new RegExp(`/\\s*${ROLL_ALIAS_INDICATOR}\\s"(.+?)"/s`, 's');
+export const ROLL_ALIAS_REGEX = /\s*@\s*"(.+?)"\s*$/s;
+// export const ROLL_ALIAS_REGEX = new RegExp(`/\\s*${ROLL_ALIAS_INDICATOR}\\s*"(.+?)"\\s*$/s`, 's');
+// export const CHAINED_ROLL_ALIAS_REGEX = new RegExp(`^\\s*${RESULT_SEPARATOR_OVERRIDE_INDICATOR}\\s*".*"${ROLL_ALIAS_REGEX}`, 's');
+export const CHAINED_ROLL_ALIAS_REGEX = /^\s*(?:~\s*".*?")?\s*@\s*"(.+?)"\s*$/s;
+// export const CHAINED_ROLL_ALIAS_REGEX = new RegExp(`/^\\s*(?:${RESULT_SEPARATOR_OVERRIDE_INDICATOR}\\s*".*?")?\\s*${ROLL_ALIAS_INDICATOR}\\s*"(.+?)"\\s*$/s`, 's');
