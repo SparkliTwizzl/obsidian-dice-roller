@@ -40,6 +40,7 @@ export const DEFAULT_SETTINGS: DiceRollerSettings = {
     diceModTemplateFolders: {},
     replaceDiceModInLivePreview: true,
     enableChainRoller: false,
+    enableFormulaAliasing: false,
     chainedResultSeparator: CHAINED_RESULT_SEPARATOR,
     allowChainedSeparatorLineBreaks: false,
     version: null,

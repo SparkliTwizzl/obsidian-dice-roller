@@ -23,7 +23,7 @@ import { Icons } from "src/utils/icons";
 import { Lexer } from "src/lexer/lexer";
 import { ButtonPosition } from "./settings.types";
 import { DiceRenderer } from "src/renderer/renderer";
-import { CHAINED_RESULT_SEPARATOR, CHAINED_ROLL_DELIMITER } from "src/utils/constants";
+import { CHAINED_RESULT_SEPARATOR, CHAINED_ROLL_DELIMITER, FORMULA_ALIAS_INDICATOR } from "src/utils/constants";
 
 declare var require: (id: "get-fonts") => { getFonts: () => Promise<string[]> };
 
@@ -103,6 +103,11 @@ export default class SettingTab extends PluginSettingTab {
                 cls: "dice-roller-nested-settings"
             })
         );
+        this.buildFormulaAliasing(
+            this.contentEl.createEl("details", {
+                cls: "dice-roller-nested-settings"
+            })
+        );
         this.buildView(
             this.contentEl.createEl("details", {
                 cls: "dice-roller-nested-settings"
@@ -113,7 +118,6 @@ export default class SettingTab extends PluginSettingTab {
                 cls: "dice-roller-nested-settings"
             })
         );
-
         this.buildFormulaSettings(
             this.contentEl.createEl("details", {
                 cls: "dice-roller-nested-settings"
@@ -390,6 +394,24 @@ export default class SettingTab extends PluginSettingTab {
                     });
             });
 
+    }
+
+    buildFormulaAliasing(containerEl: HTMLDetailsElement) {
+        containerEl.empty();
+        this.#buildSummary(containerEl, "Formula Aliasing");
+
+        new Setting(containerEl)
+            .setName("Enable Formula Aliasing")
+            .setDesc(
+                `When enabled, formulas can be aliased using ${FORMULA_ALIAS_INDICATOR}.`
+            )
+            .addToggle((t) => {
+                t.setValue(this.plugin.data.enableFormulaAliasing);
+                t.onChange(async (v) => {
+                    this.plugin.data.enableFormulaAliasing = v;
+                    await this.plugin.saveSettings();
+                });
+            });
     }
 
     buildTables(containerEl: HTMLDetailsElement) {
