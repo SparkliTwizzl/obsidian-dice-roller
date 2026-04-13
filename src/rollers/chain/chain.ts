@@ -1,7 +1,7 @@
 import { BasicRoller, type RenderableRoller } from "src/rollers/roller";
 import type { DiceRollerSettings } from "src/settings/settings.types";
 import type { App } from "obsidian";
-import { CHAINED_RESULT_SEPARATOR } from "src/utils/constants";
+import { RESULT_SEPARATOR } from "src/utils/constants";
 
 export class ChainRoller extends BasicRoller {
     result: string;
@@ -43,7 +43,7 @@ export class ChainRoller extends BasicRoller {
             .replace(/\r/g, "\\r")
             .replace(/\n/g, "\\n");
 
-        const rawSeparator = (this.data && (this.data as any).chainedResultSeparator) ?? CHAINED_RESULT_SEPARATOR;
+        const rawSeparator = (this.data && (this.data as any).chainedResultSeparator) ?? RESULT_SEPARATOR;
         const decodedSeparator = decodeEscapedControlChars(rawSeparator);
         const displayJoiner = decodedSeparator.endsWith("\n") ? decodedSeparator.trimEnd() : decodedSeparator;
 
