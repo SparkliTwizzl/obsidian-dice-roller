@@ -263,7 +263,9 @@ export class TableRoller extends GenericFileRoller<string> {
                     }
                     const rollsRoller = roller as StackRoller;
                     rollsRoller.addContexts(...this.components);
-                    await rollsRoller.roll();
+                    // Roll silently to avoid emitting a global "new-result" event for the internal
+                    // rolls calculator (which would otherwise be logged separately as a simple `1`).
+                    await (rollsRoller as any).callSilent();
                     this.rolls = rollsRoller.result;
                     if (!rollsRoller.isStatic) {
                         formula = formula.replace(
@@ -285,7 +287,9 @@ export class TableRoller extends GenericFileRoller<string> {
             let selectedOption: string = "";
 
             if (this.isLookup) {
-                const result = await this.lookupRoller.roll();
+                // Use silent call so lookup rolls don't emit their own
+                // global result events and pollute the view/history.
+                const result = await (this.lookupRoller as any).callSilent();
                 const option = this.lookupRanges.find(
                     ([range]) =>
                         (range[1] === undefined && result === range[0]) ||
@@ -435,23 +439,26 @@ export class TableRoller extends GenericFileRoller<string> {
 
     async roll(): Promise<string> {
         return new Promise(async (resolve) => {
-            if (this.loaded) {
+            let performRoll = async() => {
                 this.result = await this.getResult();
-
                 this.render();
-
                 this.trigger("new-result");
+                // Emit a workspace-level event so the view/history records
+                // the TableRoller result (internal helper rollers run silently).
+                const wrapper: Partial<any> = {
+                    getSource: () => (typeof this.getSource === "function" ? this.getSource() : ""),
+                    getResultText: () => this.getResultText?.() ?? `${this.result}`,
+                    getTooltip: () => this.getTooltip?.() ?? "",
+                    original: this.original
+                };
+                this.app.workspace.trigger("dice-roller:new-result", wrapper as any);
                 resolve(this.result);
+            };
+
+            if (this.loaded) {
+                performRoll();
             } else {
-                this.once("loaded", async () => {
-                    this.result = await this.getResult();
-
-                    this.render();
-
-                    this.trigger("new-result");
-                    resolve(this.result);
-                });
-
+                this.once("loaded", async () => performRoll());
                 this.load();
             }
         });
