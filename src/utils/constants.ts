@@ -5,6 +5,7 @@ export const CONDITIONAL_REGEX = /(?:(?<operator>=|=!|<|>|<=|>=|=<|=>|\-=|=\-)(?
 export const DATAVIEW_REGEX = /(?:(?<roll>\d+)[Dd]?)?dv\((?<query>.+)\)(?:\|(?<collapse>[\+-]))?(?:\|(?<types>[^\+-]+))?/u;
 export const DICE_REGEX = /(?<dice>(?<roll>\d+)(?:[Dd]?\[?(?:-?\d+\s?,)?\s?(?:-?\d+|%|F)\]?)?)(?<conditional>(?:(?:=|=!|<|>|<=|>=|=<|=>|\-=|=\-)\d+)*)?/;
 export const FORMULA_ALIAS_INDICATOR = "@";
+export const FORMULA_ALIAS_REGEX = /@"([\s\S]*?)"$/s;
 export const MATH_REGEX = /[\(\^\+\-\*\/\)]/;
 export const OMITTED_REGEX = /(?<roll>\d+)?[Dd](?<faces>\[?(?:-?\d+\s?,)?\s?(?:-?\d+|%|F)\]?)?(?<conditional>(?:(?:=|=!|<|>|<=|>=|=<|=>|\-=|=\-)\d+)*)?/;
 export const SECTION_REGEX = /(?:(?<roll>\d+)[Dd])?(?:\[.*\]\(|\[\[)(?<link>.+)(?:\]\]|\))\|?(?<types>.+)?/;
