@@ -23,7 +23,7 @@ import { Icons } from "src/utils/icons";
 import { Lexer } from "src/lexer/lexer";
 import { ButtonPosition } from "./settings.types";
 import { DiceRenderer } from "src/renderer/renderer";
-import { CHAINED_RESULT_SEPARATOR, CHAINED_ROLL_DELIMITER, FORMULA_ALIAS_INDICATOR } from "src/utils/constants";
+import { CHAINED_RESULT_SEPARATOR, CHAINED_ROLL_DELIMITER, ROLL_ALIAS_INDICATOR } from "src/utils/constants";
 
 declare var require: (id: "get-fonts") => { getFonts: () => Promise<string[]> };
 
@@ -103,7 +103,7 @@ export default class SettingTab extends PluginSettingTab {
                 cls: "dice-roller-nested-settings"
             })
         );
-        this.buildFormulaAliasing(
+        this.buildRollAliasing(
             this.contentEl.createEl("details", {
                 cls: "dice-roller-nested-settings"
             })
@@ -396,19 +396,19 @@ export default class SettingTab extends PluginSettingTab {
 
     }
 
-    buildFormulaAliasing(containerEl: HTMLDetailsElement) {
+    buildRollAliasing(containerEl: HTMLDetailsElement) {
         containerEl.empty();
-        this.#buildSummary(containerEl, "Formula Aliasing");
+        this.#buildSummary(containerEl, "Roll Aliasing");
 
         new Setting(containerEl)
-            .setName("Enable Formula Aliasing")
+            .setName("Enable Roll Aliasing")
             .setDesc(
-                `When enabled, formulas can be aliased using ${FORMULA_ALIAS_INDICATOR}.`
+                `When enabled, dice rolls can be aliased using ${ROLL_ALIAS_INDICATOR}.`
             )
             .addToggle((t) => {
-                t.setValue(this.plugin.data.enableFormulaAliasing);
+                t.setValue(this.plugin.data.enableRollAliasing);
                 t.onChange(async (v) => {
-                    this.plugin.data.enableFormulaAliasing = v;
+                    this.plugin.data.enableRollAliasing = v;
                     await this.plugin.saveSettings();
                 });
             });
