@@ -1,4 +1,4 @@
-export const CHAINED_RESULT_SEPARATOR = ";";
+export const CHAINED_RESULT_SEPARATOR = "; ";
 export const CHAINED_RESULT_SEPARATOR_OVERRIDE_REGEX = /^~"(.*)"$/s;
 export const CHAINED_ROLL_DELIMITER = ";";
 export const CONDITIONAL_REGEX = /(?:(?<operator>=|=!|<|>|<=|>=|=<|=>|\-=|=\-)(?<comparer>\d+))/g;
