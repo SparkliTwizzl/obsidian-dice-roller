@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file. See [standa
 
 * Chained rolls are now supported in notes.
 
+### Bug Fixes
+
+* TableRollers no longer log to Dice Tray incorrectly.
+
 ## [11.4.2](https://github.com/javalent/dice-roller/compare/11.4.1...11.4.2) (2025-03-24)
 
 
