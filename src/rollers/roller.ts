@@ -120,6 +120,7 @@ abstract class BareRoller<T> extends Roller<T> {
 
         this.containerEl.onclick = this.onClick.bind(this);
     }
+    formulaAlias?: string;
     rolls: number;
     loaded: boolean = false;
     onLoad(callback: () => void) {
