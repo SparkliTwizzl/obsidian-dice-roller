@@ -32,23 +32,20 @@ export class ChainRoller extends BasicRoller {
             }
             subResults.push(textResult);
         }
+
+        const decodeEscapedControlChars = (s: string) => s
+            .replace(/\\t/g, "\t")
+            .replace(/\\r/g, "\r")
+            .replace(/\\n/g, "\n");
+
+        const escapeControlChars = (s: string) => s
+            .replace(/\t/g, "\\t")
+            .replace(/\r/g, "\\r")
+            .replace(/\n/g, "\\n");
+
         const rawSeparator = (this.data && (this.data as any).chainedResultSeparator) ?? CHAINED_RESULT_SEPARATOR;
-
-        const interpretEscapes = (s: string) =>
-            s
-                .replace(/\\r/g, "\r")
-                .replace(/\\n/g, "\n")
-                .replace(/\\t/g, "\t");
-
-        const decodedSeparator = interpretEscapes(rawSeparator);
-
-        // Display joiner: decoded separator, with a space unless it contains a newline.
-        const displayJoiner = decodedSeparator.includes("\n") ? decodedSeparator : `${decodedSeparator} `;
-
-        // Inline joiners by default preserve literal text for inline replacers and
-        // escape any actual newline/tab characters to printable representations.
-        const escapeActual = (s: string) =>
-            s.replace(/\r/g, "\\r").replace(/\n/g, "\\n").replace(/\t/g, "\\t");
+        const decodedSeparator = decodeEscapedControlChars(rawSeparator);
+        const displayJoiner = decodedSeparator.endsWith("\n") ? decodedSeparator.trimEnd() : decodedSeparator;
 
         const allowLineBreaks = (this.data && (this.data as any).allowChainedSeparatorLineBreaks) ?? false;
 
@@ -56,17 +53,14 @@ export class ChainRoller extends BasicRoller {
         if (allowLineBreaks) {
             inlineJoiner = displayJoiner;
         } else {
-            const shouldEscapeActual = rawSeparator.includes("\n") || rawSeparator.includes("\r") || rawSeparator.includes("\t");
-            const inlineSeparator = shouldEscapeActual ? escapeActual(rawSeparator) : rawSeparator;
-            inlineJoiner = `${inlineSeparator} `;
+            const shouldEscapeControlChars = rawSeparator.includes("\t") || rawSeparator.includes("\r") || rawSeparator.includes("\n");
+            inlineJoiner = shouldEscapeControlChars ? escapeControlChars(rawSeparator) : rawSeparator;
         }
 
         const inlineResult = subResults.join(inlineJoiner);
         const displayResult = subResults.join(displayJoiner);
-
         (this as any)._chainedInlineResult = inlineResult;
         (this as any)._chainedDisplayResult = displayResult;
-
         return inlineResult;
     }
 
@@ -93,6 +87,7 @@ export class ChainRoller extends BasicRoller {
 
     async build() {
         this.resultEl.empty();
+
         // If this roller is being displayed as an embed, show the decoded/display result
         // (which may contain real newlines). Otherwise show the inline literal result.
         const displayText = (this.data && (this.data as any).displayAsEmbed)
@@ -108,6 +103,7 @@ export class ChainRoller extends BasicRoller {
     async getReplacer() {
         let inline = this.shouldShowFormula ? `${this.inlineText} ` : "";
         const inlineText = (this as any)._chainedInlineResult ?? this.result ?? "";
+
         // Ensure accidental real newlines are represented as literal escapes in
         // inline replacers unless the user explicitly allows line breaks.
         const allowLineBreaks = (this.data && (this.data as any).allowChainedSeparatorLineBreaks) ?? false;

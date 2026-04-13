@@ -17,7 +17,7 @@ import { LineRoller } from "src/rollers/line/line";
 import { SectionRoller } from "src/rollers/section/section";
 import { DataViewRoller, TagRoller } from "src/rollers/tag/tag";
 import { TableRoller } from "src/rollers/table/table";
-import { CHAINED_ROLL_DELIMITER } from "src/utils/constants";
+import { CHAINED_RESULT_SEPARATOR_OVERRIDE_REGEX, CHAINED_ROLL_DELIMITER } from "src/utils/constants";
 
 export * from "../types/api";
 
@@ -236,6 +236,22 @@ class APIInstance {
         // Only parse chained-dice-roll formulas when the feature is enabled.
         if (this.data.enableChainRoller && content.includes(CHAINED_ROLL_DELIMITER)) {
             let segments = content.split(CHAINED_ROLL_DELIMITER);
+
+            // If the final non-empty segment is of the form ~"text",
+            // treat it as an override for the chained result separator
+            // and do not treat it as a sub-roll.
+            let overrideSeparator: string | undefined;
+            for (let i = segments.length - 1; i >= 0; --i) {
+                const candidate = segments[i].trim();
+                if (candidate === "") continue;
+                const m = candidate.match(CHAINED_RESULT_SEPARATOR_OVERRIDE_REGEX);
+                if (m) {
+                    overrideSeparator = m[1];
+                    segments.splice(i, 1);
+                }
+                break;
+            }
+
             const rollers: BasicRoller[] = [];
             for (let i = 0; i < segments.length; ++i) {
                 let segment = segments[i].trim();
@@ -249,7 +265,12 @@ class APIInstance {
                 }
                 rollers.push(roller);
             }
-            return new ChainRoller(this.data, content, rollers, this.app, position);
+
+            const chainData = overrideSeparator
+                ? Object.assign({}, this.data, { chainedResultSeparator: overrideSeparator })
+                : this.data;
+
+            return new ChainRoller(chainData, content, rollers, this.app, position);
         }
 
         const lexemeResult = Lexer.parse(content);
