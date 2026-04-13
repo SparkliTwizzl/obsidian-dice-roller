@@ -32,8 +32,33 @@ export class ChainRoller extends BasicRoller {
             }
             subResults.push(textResult);
         }
-        const separator = (this.data && (this.data as any).chainedResultSeparator) ?? CHAINED_RESULT_SEPARATOR;
-        return subResults.join(`${separator} `);
+        const rawSeparator = (this.data && (this.data as any).chainedResultSeparator) ?? CHAINED_RESULT_SEPARATOR;
+
+        const interpretEscapes = (s: string) =>
+            s
+                .replace(/\\r/g, "\r")
+                .replace(/\\n/g, "\n")
+                .replace(/\\t/g, "\t");
+
+        const decodedSeparator = interpretEscapes(rawSeparator);
+
+        // Display joiner: decoded separator, with a space unless it contains a newline.
+        const displayJoiner = decodedSeparator.includes("\n") ? decodedSeparator : `${decodedSeparator} `;
+
+        // Inline joiner: preserve literal text for inline replacers. If the raw contains
+        // actual newline characters, escape them to a printable representation.
+        const escapeActual = (s: string) =>
+            s.replace(/\r/g, "\\r").replace(/\n/g, "\\n").replace(/\t/g, "\\t");
+        const inlineSeparator = rawSeparator.includes("\n") || rawSeparator.includes("\r") || rawSeparator.includes("\t") ? escapeActual(rawSeparator) : rawSeparator;
+        const inlineJoiner = `${inlineSeparator} `;
+
+        const inlineResult = subResults.join(inlineJoiner);
+        const displayResult = subResults.join(displayJoiner);
+
+        (this as any)._chainedInlineResult = inlineResult;
+        (this as any)._chainedDisplayResult = displayResult;
+
+        return inlineResult;
     }
 
     constructor(
@@ -59,12 +84,24 @@ export class ChainRoller extends BasicRoller {
 
     async build() {
         this.resultEl.empty();
-        this.resultEl.setText(this.result ?? "");
+        // If this roller is being displayed as an embed, show the decoded/display result
+        // (which may contain real newlines). Otherwise show the inline literal result.
+        const displayText = (this.data && (this.data as any).displayAsEmbed)
+            ? ((this as any)._chainedDisplayResult ?? this.result)
+            : (this as any)._chainedInlineResult ?? this.result;
+
+        this.resultEl.setText(displayText ?? "");
+        if (displayText && displayText.includes("\n")) {
+            (this.resultEl.style as any).whiteSpace = "pre-wrap";
+        }
     }
 
     async getReplacer() {
         let inline = this.shouldShowFormula ? `${this.inlineText} ` : "";
-        return `${inline}${this.result}`;
+        const inlineText = (this as any)._chainedInlineResult ?? this.result ?? "";
+        // Ensure any accidental real newlines are represented as literal escapes in inline replacers.
+        const normalized = inlineText.replace(/\r/g, "\\r").replace(/\n/g, "\\n");
+        return `${inline}${normalized}`;
     }
 
     getTooltip() {
@@ -89,11 +126,12 @@ export class ChainRoller extends BasicRoller {
     }
 
     async rollSilent() {
-        this.result = await this.executeRoll()
+        this.result = await this.executeRoll();
         return this.result;
     }
 
     getResultText(): string {
-        return `${this.result}`;
+        // Dice Tray / external consumers should get the decoded/display result so newlines render.
+        return `${(this as any)._chainedDisplayResult ?? this.result}`;
     }
 }

@@ -347,12 +347,15 @@ export default class DiceView extends ItemView {
                 text: `${result.resultText}`
             });
         }
-        resultEl.createEl("strong", {
+        const strongEl = resultEl.createEl("strong", {
             attr: {
                 "aria-label": result.resultText
             },
             text: `${result.result}`
         });
+        if (typeof result.result === "string" && result.result.includes("\n")) {
+            (strongEl.style as any).whiteSpace = "pre-wrap";
+        }
 
         const context = resultEl.createDiv("result-context");
 
