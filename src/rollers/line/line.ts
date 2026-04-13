@@ -109,6 +109,7 @@ export class LineRoller extends GenericEmbeddedRoller<string> {
             .map((c) => c.trim())
             .filter((c) => c && c.length);
     }
+
     async roll(): Promise<string> {
         return new Promise((resolve, reject) => {
             if (!this.loaded) {
@@ -146,6 +147,33 @@ export class LineRoller extends GenericEmbeddedRoller<string> {
                 this.render();
                 this.trigger("new-result");
                 resolve(this.results[0]);
+            }
+        });
+    }
+
+    async rollSilent(): Promise<string> {
+        return new Promise((resolve, reject) => {
+            let performRoll = async() => {
+                const options = [...this.options];
+
+                this.results = [...Array(this.rolls)]
+                    .map(() => {
+                        let option =
+                            options[
+                                this.getRandomBetween(0, options.length - 1)
+                            ];
+                        options.splice(options.indexOf(option), 1);
+                        return option;
+                    })
+                    .filter((r) => r);
+                resolve(this.results[0]);
+            };
+
+            if (this.loaded) {
+                performRoll();
+            } else {
+                this.once("loaded", () => performRoll());
+                this.load();
             }
         });
     }

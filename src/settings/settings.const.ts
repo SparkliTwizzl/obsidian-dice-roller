@@ -2,6 +2,7 @@ import { Round, ExpectedValue } from "../types/api";
 import { DEFAULT_ICONS } from "../view/view.icons";
 import copy from "fast-copy";
 import { ButtonPosition, type DiceRollerSettings } from "./settings.types";
+import { CHAINED_RESULT_SEPARATOR } from "src/utils/constants";
 
 export const DEFAULT_SETTINGS: DiceRollerSettings = {
     position: ButtonPosition.RIGHT,
@@ -38,6 +39,9 @@ export const DEFAULT_SETTINGS: DiceRollerSettings = {
     showRenderNotice: true,
     diceModTemplateFolders: {},
     replaceDiceModInLivePreview: true,
+    enableChainRoller: false,
+    chainedResultSeparator: CHAINED_RESULT_SEPARATOR,
+    allowChainedSeparatorLineBreaks: false,
     version: null,
     viewResults: []
 };

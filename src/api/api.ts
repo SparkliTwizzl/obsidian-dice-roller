@@ -10,13 +10,14 @@ import { Lexer, type LexicalToken } from "../lexer/lexer";
 import type { App } from "obsidian";
 
 import { DataviewManager } from "./api.dataview";
-import { None, Some, type Option } from "@sniptt/monads";
+import { ChainRoller } from "src/rollers/chain/chain";
+import { NarrativeStackRoller } from "src/rollers/dice/narrative";
 import { StackRoller } from "src/rollers/dice/stack";
-import { TableRoller } from "src/rollers/table/table";
+import { LineRoller } from "src/rollers/line/line";
 import { SectionRoller } from "src/rollers/section/section";
 import { DataViewRoller, TagRoller } from "src/rollers/tag/tag";
-import { LineRoller } from "src/rollers/line/line";
-import { NarrativeStackRoller } from "src/rollers/dice/narrative";
+import { TableRoller } from "src/rollers/table/table";
+import { CHAINED_RESULT_SEPARATOR_OVERRIDE_REGEX, CHAINED_ROLL_DELIMITER } from "src/utils/constants";
 
 export * from "../types/api";
 
@@ -49,6 +50,7 @@ declare global {
         DiceRoller: APIInstance;
     }
 }
+
 declare module "obsidian" {
     interface Workspace {
         on(
@@ -72,6 +74,7 @@ declare module "obsidian" {
         on(name: "dice-roller:unloaded", callback: () => void): EventRef;
     }
 }
+
 class APIInstance {
     app: App;
     data: DiceRollerSettings;
@@ -229,6 +232,46 @@ class APIInstance {
             signed,
             lookup
         } = this.getParametersForRoller(raw, options);
+
+        // Only parse chained-dice-roll formulas when the feature is enabled.
+        if (this.data.enableChainRoller && content.includes(CHAINED_ROLL_DELIMITER)) {
+            let segments = content.split(CHAINED_ROLL_DELIMITER);
+
+            // If the final non-empty segment is of the form ~"text",
+            // treat it as an override for the chained result separator
+            // and do not treat it as a sub-roll.
+            let overrideSeparator: string | undefined;
+            for (let i = segments.length - 1; i >= 0; --i) {
+                const candidate = segments[i].trim();
+                if (candidate === "") continue;
+                const m = candidate.match(CHAINED_RESULT_SEPARATOR_OVERRIDE_REGEX);
+                if (m) {
+                    overrideSeparator = m[1];
+                    segments.splice(i, 1);
+                }
+                break;
+            }
+
+            const rollers: BasicRoller[] = [];
+            for (let i = 0; i < segments.length; ++i) {
+                let segment = segments[i].trim();
+                if (segment === "") {
+                    continue;
+                }
+                let roller = this.getRoller(segment, source);
+                if (!roller) {
+                    console.error(`\`${segment}\` is not a valid dice roll.`);
+                    return null;
+                }
+                rollers.push(roller);
+            }
+
+            const chainData = overrideSeparator
+                ? Object.assign({}, this.data, { chainedResultSeparator: overrideSeparator })
+                : this.data;
+
+            return new ChainRoller(chainData, content, rollers, this.app, position);
+        }
 
         const lexemeResult = Lexer.parse(content);
 

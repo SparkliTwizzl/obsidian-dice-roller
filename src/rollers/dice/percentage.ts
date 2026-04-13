@@ -1,3 +1,4 @@
+import { API } from "src/api/api";
 import type { LexicalToken } from "src/lexer/lexer";
 import { DiceRoller } from "./dice";
 import { RenderTypes } from "./renderable";
@@ -23,6 +24,7 @@ export class PercentRoller extends DiceRoller {
             this.stack.push(stack);
         }
     }
+
     get result() {
         let result = 0;
         for (const stack of this.stack) {
@@ -35,15 +37,27 @@ export class PercentRoller extends DiceRoller {
         }
         return result;
     }
+
     get display() {
         return this.stack
             .map((stack) => stack.map((v) => v.result).join(","))
             .join("|");
     }
+
     async roll() {
         if (!this.stack || !this.stack.length) return super.roll();
         this.stack.forEach((stack) => stack.map((dice) => dice.roll()));
     }
+
+    async rollSilent() {
+        if (!this.stack || !this.stack.length) return super.rollSilent();
+        this.stack.forEach((stack) =>
+            stack.map((dice) =>
+                API?.data?.enableChainRoller ? dice.rollSilent() : dice.roll()
+            )
+        );
+    }
+
     allowAverage(): boolean {
         return false;
     }

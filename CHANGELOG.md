@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [11.5.0]()
+
+### Features
+
+* Chained rolls are now supported in notes.
+
 ## [11.4.2](https://github.com/javalent/dice-roller/compare/11.4.1...11.4.2) (2025-03-24)
 
 

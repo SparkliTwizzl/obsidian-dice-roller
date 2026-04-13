@@ -183,6 +183,7 @@ abstract class DataViewEnabledRoller extends BasicRoller<SectionRoller> {
             }
         }
     }
+
     async roll(): Promise<SectionRoller> {
         return new Promise((resolve, reject) => {
             if (this.loaded) {
@@ -201,6 +202,22 @@ abstract class DataViewEnabledRoller extends BasicRoller<SectionRoller> {
             }
         });
     }
+
+    async rollSilent(): Promise<SectionRoller> {
+        return new Promise((resolve, reject) => {
+            let performRoll = async() => {
+                this.result = this.results[0];
+                resolve(this.result);
+            };
+            if (this.loaded) {
+                performRoll();
+            } else {
+                this.on("loaded", () => performRoll());
+                this.load();
+            }
+        });
+    }
+
     getTooltip() {
         return this.original;
     }

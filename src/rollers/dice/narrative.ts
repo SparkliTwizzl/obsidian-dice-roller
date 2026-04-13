@@ -58,6 +58,7 @@ class BoostRoller extends NarrativeRoller {
         super(`${amount}d6`);
     }
 }
+
 class SetbackRoller extends NarrativeRoller {
     toNarrativeResult(): NarrativeResult {
         const narrativeResult: NarrativeResult = {
@@ -90,6 +91,7 @@ class SetbackRoller extends NarrativeRoller {
         super(`${amount}d6`);
     }
 }
+
 class AbilityRoller extends NarrativeRoller {
     toNarrativeResult(): NarrativeResult {
         const narrativeResult: NarrativeResult = {
@@ -131,6 +133,7 @@ class AbilityRoller extends NarrativeRoller {
         super(`${amount}d8`);
     }
 }
+
 class DifficultyRoller extends NarrativeRoller {
     toNarrativeResult(): NarrativeResult {
         const narrativeResult: NarrativeResult = {
@@ -169,6 +172,7 @@ class DifficultyRoller extends NarrativeRoller {
         super(`${amount}d8`);
     }
 }
+
 class ProficiencyRoller extends NarrativeRoller {
     toNarrativeResult(): NarrativeResult {
         const narrativeResult: NarrativeResult = {
@@ -230,6 +234,7 @@ class ProficiencyRoller extends NarrativeRoller {
         super(`${amount}d12`);
     }
 }
+
 class ChallengeRoller extends NarrativeRoller {
     toNarrativeResult(): NarrativeResult {
         const narrativeResult: NarrativeResult = {
@@ -290,6 +295,7 @@ class ChallengeRoller extends NarrativeRoller {
         super(`${amount}d12`);
     }
 }
+
 class ForceRoller extends NarrativeRoller {
     toNarrativeResult(): NarrativeResult {
         const narrativeResult: NarrativeResult = {
@@ -329,6 +335,7 @@ class ForceRoller extends NarrativeRoller {
         super(`${amount}d12`);
     }
 }
+
 const NARRATIVE_FACES = ["g", "y", "b", "r", "p", "s", "w"] as const;
 type NarrativeFace = (typeof NARRATIVE_FACES)[number];
 export class NarrativeStackRoller extends RenderableRoller<NarrativeResult> {
@@ -490,6 +497,7 @@ ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
         throw new Error("Method not implemented.");
     }
     result: NarrativeResult;
+
     async roll(render?: boolean): Promise<NarrativeResult> {
         if (render || (this.shouldRender && this.hasRunOnce)) {
             await this.renderChildren();
@@ -505,6 +513,19 @@ ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
         this.render();
         return this.result;
     }
+
+    async rollSilent(render?: boolean): Promise<NarrativeResult> {
+        if (render || (this.shouldRender && this.hasRunOnce)) {
+            await this.renderChildren();
+        } else {
+            return this.rollSilentSync();
+        }
+        this.hasRunOnce = true;
+        this.calculate();
+
+        return this.result;
+    }
+
     rollSync() {
         for (const dice of this.children) {
             dice.rollSync();
@@ -515,6 +536,15 @@ ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
         this.app.workspace.trigger("dice-roller:new-result", this);
 
         this.render();
+        return this.result;
+    }
+
+    rollSilentSync() {
+        for (const dice of this.children) {
+            dice.rollSilentSync();
+        }
+        this.hasRunOnce = true;
+        this.calculate();
         return this.result;
     }
 

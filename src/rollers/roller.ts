@@ -47,6 +47,8 @@ export abstract class Roller<T> extends Component implements Events {
     }
     abstract roll(): Promise<T> | T;
 
+    abstract rollSilent(): Promise<T> | T;
+
     components: ComponentLike[] = [];
     loaded: boolean = false;
     onload(): void {
@@ -72,12 +74,14 @@ export abstract class Roller<T> extends Component implements Events {
         return Math.floor(rand * (max - min + 1)) + min;
     }
 }
+
 interface BareRoller<T> {
     on(name: "loaded", callback: () => void): EventRef;
     trigger(name: "loaded"): void;
     on(name: "new-result", callback: () => void): EventRef;
     trigger(name: "new-result"): void;
 }
+
 abstract class BareRoller<T> extends Roller<T> {
     constructor(
         public data: DiceRollerSettings,
@@ -177,6 +181,8 @@ export abstract class BasicRoller<T = any> extends BareRoller<T> {
     abstract result: T;
     abstract roll(): Promise<T>;
 
+    abstract rollSilent(): Promise<T>;
+
     public setSource(source: string) {
         this.source = source;
     }
@@ -195,6 +201,19 @@ export abstract class BasicRoller<T = any> extends BareRoller<T> {
         public position = data.position
     ) {
         super(data, original, position);
+    }
+
+    // Helper that respects the feature flag: if silent rolls are disabled,
+    // fall back to the normal `roll` implementation.
+    async callSilent(render?: boolean): Promise<any> {
+        if (this.data?.enableChainRoller) {
+            // Prefer the silent variant if present
+            // @ts-ignore allow calling subclass implementation
+            return await (this as any).rollSilent?.(render);
+        }
+        // Fallback to regular roll
+        // @ts-ignore allow calling subclass implementation
+        return await (this as any).roll?.(render);
     }
 }
 
@@ -224,8 +243,14 @@ export abstract class RenderableRoller<T = any> extends BasicRoller<T> {
         }
     }
 
-    abstract rollSync(): T;
     abstract roll(render?: boolean): Promise<T>;
+
+    abstract rollSilent(render?: boolean) : Promise<T>;
+
+    abstract rollSilentSync(): T;
+
+    abstract rollSync(): T;
+
     abstract getResultText(): string;
 
     children: RenderableDice<any>[];
@@ -258,6 +283,7 @@ export abstract class RenderableRoller<T = any> extends BasicRoller<T> {
         this.setTooltip();
     }
 }
+
 export abstract class GenericFileRoller<T> extends BasicRoller<T> {
     path: string;
     file: TFile;
@@ -381,12 +407,15 @@ export abstract class GenericEmbeddedRoller<T> extends GenericFileRoller<T> {
         setIcon(this.copy, Icons.COPY);
     }
 }
+
 export class ArrayRoller<T = any> extends BareRoller<T> {
     declare result: any;
     results: any[];
+
     getTooltip(): string {
         return `${this.options.toString()}\n\n${this.results.toString()}`;
     }
+
     async roll() {
         const options = [...this.options];
 
@@ -403,10 +432,26 @@ export class ArrayRoller<T = any> extends BareRoller<T> {
         this.result = this.results[0];
         return this.results[0];
     }
+
+    async rollSilent() {
+        const options = [...this.options];
+        this.results = [...Array(this.rolls)]
+            .map(() => {
+                let option =
+                    options[this.getRandomBetween(0, options.length - 1)];
+                options.splice(options.indexOf(option), 1);
+                return option;
+            })
+            .filter((r) => r);
+        this.result = this.results[0];
+        return this.results[0];
+    }
+
     async build() {
         this.resultEl.empty();
         this.resultEl.setText(this.results.toString());
     }
+
     constructor(
         data: DiceRollerSettings,
         public options: any[],

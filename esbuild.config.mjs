@@ -91,6 +91,10 @@ if (prod) {
     });
 } else {
     let ctx = await esbuild.context(parameters);
+    let fs = await import("fs");
+    if (!prod && !fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
     await copyFile("./manifest.json", path.resolve(dir, "manifest.json"));
     await ctx.watch();
 }
