@@ -357,6 +357,39 @@ export default class SettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 });
             });
+
+        new Setting(containerEl)
+            .setName("Reset Chained Rolls Settings (CAUTION)")
+            .setDesc("Reset chained rolls settings to defaults. WARNING: This is a destructive action.")
+            .addExtraButton((b: ExtraButtonComponent) => {
+                const CONFIRM_TIMEOUT_SECONDS = 3;
+                const CONFIRM_TIMEOUT_MILLISECONDS = CONFIRM_TIMEOUT_SECONDS * 1000;
+                b.setIcon(Icons.RESET)
+                    .setTooltip("Reset Chained Rolls Settings to Defaults")
+                    .onClick(async () => {
+                        const key = "__chained_reset_confirm";
+                        if ((b as any)[key]) {
+                            this.plugin.data.chainedResultSeparator = DEFAULT_SETTINGS.chainedResultSeparator;
+                            (this.plugin.data as any).allowChainedSeparatorLineBreaks = (DEFAULT_SETTINGS as any).allowChainedSeparatorLineBreaks;
+                            await this.plugin.saveSettings();
+                            new Notice("Chained Rolls settings reset to defaults.");
+                            this.buildChainedRolls(containerEl);
+                            return;
+                        }
+
+                        // first click: warn and set confirmation window
+                        (b as any)[key] = true;
+                        b.setIcon(Icons.WARNING).setTooltip(`Click again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
+                        new Notice(`This is a destructive action. Click the reset button again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
+                        setTimeout(() => {
+                            (b as any)[key] = false;
+                            try {
+                                b.setIcon(Icons.RESET).setTooltip("Reset to Default");
+                            } catch (e) {}
+                        }, CONFIRM_TIMEOUT_MILLISECONDS);
+                    });
+            });
+
     }
 
     buildTables(containerEl: HTMLDetailsElement) {
