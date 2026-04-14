@@ -15,7 +15,7 @@ import {
 import { Round, ExpectedValue } from "src/types/api";
 import type DiceRoller from "../main";
 import { DEFAULT_SETTINGS } from "src/settings/settings.const";
-import { type DiceIcon, IconManager, IconShapes } from "src/view/dice-tray.icons";
+import { type DiceIcon, IconManager, IconShapes } from "src/views/dice-tray.icons";
 import { generateSlug } from "random-word-slugs";
 import { FontSuggestionModal } from "src/suggester/fonts";
 import { FolderInputSuggest } from "@javalent/utilities";
