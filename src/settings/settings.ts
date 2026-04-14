@@ -63,11 +63,11 @@ export default class SettingTab extends PluginSettingTab {
             ) {
                 fonts = await window?.Capacitor?.Plugins["App"]
                     ?.getFonts()
-                    ?.catch((e) => []);
+                    ?.catch((e): string[] => []);
             } else {
                 fonts = await require("get-fonts")
                     .getFonts()
-                    .catch((e) => []);
+                    .catch((e): string[] => []);
             }
         } catch (e) {}
 
