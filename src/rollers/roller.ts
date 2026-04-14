@@ -202,7 +202,8 @@ export abstract class BasicRoller<T = any> extends BareRoller<T> {
     }
 
     get inlineText() {
-        return `${this.getTooltip().split("\n").join(" -> ")} -> `;
+        const parts = this.getTooltip().split(/\n+/).filter(Boolean);
+        return `${parts.join(" -> ")} -> `;
     }
 
     constructor(
