@@ -120,7 +120,7 @@ abstract class BareRoller<T> extends Roller<T> {
 
         this.containerEl.onclick = this.onClick.bind(this);
     }
-    rollAlias?: string;
+    alias?: string;
     rolls: number;
     loaded: boolean = false;
     onLoad(callback: () => void) {
@@ -142,8 +142,8 @@ abstract class BareRoller<T> extends Roller<T> {
     resultEl: HTMLSpanElement;
     iconEl: HTMLSpanElement;
 
-    setRollAlias(alias: string) {
-        this.rollAlias = alias ?? undefined;
+    setAlias(alias: string) {
+        this.alias = alias ?? undefined;
     }
 
     setTooltip() {

@@ -299,7 +299,7 @@ class APIInstance {
 
             let roller = new ChainRoller(chainData, content, rollers, this.app, position);
             if (rollAlias) {
-                roller.setRollAlias(rollAlias);
+                roller.setAlias(rollAlias);
             }
             return roller;
         }
@@ -331,7 +331,7 @@ class APIInstance {
                         position
                     );
                 if (rollAlias) {
-                    roller.setRollAlias(rollAlias);
+                    roller.setAlias(rollAlias);
                 }
                 return roller;
             }
@@ -353,7 +353,7 @@ class APIInstance {
                 roller.showRenderNotice = this.data.showRenderNotice;
                 roller.setSource(source);
                 if (rollAlias) {
-                    roller.setRollAlias(rollAlias);
+                    roller.setAlias(rollAlias);
                 }
                 return roller;
             }
@@ -368,7 +368,7 @@ class APIInstance {
                     lookup
                 );
                 if (rollAlias) {
-                    roller.setRollAlias(rollAlias);
+                    roller.setAlias(rollAlias);
                 }
                 return roller;
             }
@@ -382,7 +382,7 @@ class APIInstance {
                     position
                 );
                 if (rollAlias) {
-                    roller.setRollAlias(rollAlias);
+                    roller.setAlias(rollAlias);
                 }
                 return roller;
             }
@@ -401,7 +401,7 @@ class APIInstance {
                     position
                 );
                 if (rollAlias) {
-                    roller.setRollAlias(rollAlias);
+                    roller.setAlias(rollAlias);
                 }
                 return roller;
             }
@@ -420,7 +420,7 @@ class APIInstance {
                     position
                 );
                 if (rollAlias) {
-                    roller.setRollAlias(rollAlias);
+                    roller.setAlias(rollAlias);
                 }
                 return roller;
             }
@@ -434,7 +434,7 @@ class APIInstance {
                     position
                 );
                 if (rollAlias) {
-                    roller.setRollAlias(rollAlias);
+                    roller.setAlias(rollAlias);
                 }
                 return roller;
             }
