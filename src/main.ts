@@ -4,7 +4,7 @@ import { StackRoller } from "./rollers/dice/stack";
 
 import SettingTab from "./settings/settings";
 
-import DiceView, { VIEW_TYPE } from "./view/view";
+import DiceView, { VIEW_TYPE } from "./view/dice-tray";
 import { DiceRenderer, type RendererData } from "./renderer/renderer";
 import { Lexer } from "./lexer/lexer";
 import { type RollerOptions } from "./api/api";

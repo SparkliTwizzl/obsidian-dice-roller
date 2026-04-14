@@ -6,7 +6,7 @@
     import { Icons } from "src/utils/icons";
     import { createEventDispatcher } from "svelte";
     import type DiceRollerPlugin from "src/main";
-    import type DiceView from "../view";
+    import type DiceView from "../dice-tray";
 
     export let settings: DiceRollerSettings;
     export let plugin: DiceRollerPlugin;

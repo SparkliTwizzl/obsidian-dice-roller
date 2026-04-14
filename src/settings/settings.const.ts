@@ -1,5 +1,5 @@
 import { Round, ExpectedValue } from "../types/api";
-import { DEFAULT_ICONS } from "../view/view.icons";
+import { DEFAULT_ICONS } from "../view/dice-tray.icons";
 import copy from "fast-copy";
 import { ButtonPosition, type DiceRollerSettings } from "./settings.types";
 import { RESULT_SEPARATOR } from "src/utils/constants";

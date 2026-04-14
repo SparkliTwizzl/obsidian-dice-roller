@@ -1,6 +1,6 @@
-import type { ViewResult } from "src/view/view";
+import type { ViewResult } from "src/view/dice-tray";
 import { Round, ExpectedValue } from "../types/api";
-import type { DiceIcon } from "../view/view.icons";
+import type { DiceIcon } from "../view/dice-tray.icons";
 
 export const ButtonPosition = {
     LEFT: "LEFT",

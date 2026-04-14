@@ -11,7 +11,7 @@ import type DiceRollerPlugin from "src/main";
 import { StackRoller } from "src/rollers/dice/stack";
 import { ExpectedValue } from "../types/api";
 import { API } from "../api/api";
-import { type DiceIcon, IconManager } from "./view.icons";
+import { type DiceIcon, IconManager } from "./dice-tray.icons";
 import { Icons } from "src/utils/icons";
 import { nanoid } from "nanoid";
 import DiceTray from "./ui/DiceTray.svelte";
