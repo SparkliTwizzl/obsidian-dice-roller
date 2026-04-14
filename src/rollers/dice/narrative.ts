@@ -384,15 +384,15 @@ export class NarrativeStackRoller extends RenderableRoller<NarrativeResult> {
             map.light += die.light;
             map.dark += die.dark
         }
-        return `${formulaLabel}\n**Totals**
-        Successes: ${map.success}
-        Failures: ${map.failure}
-        Advantages: ${map.advantage}
-        Threats: ${map.threat}
-        Triumphs: ${map.triumph}
-        Despairs: ${map.despair}
-        ${map.light > 0 ? `Light Side: ${map.light}` : ''}
-        ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
+        return `${formulaLabel}\n\n**Totals**
+Successes: ${map.success}
+Failures: ${map.failure}
+Advantages: ${map.advantage}
+Threats: ${map.threat}
+Triumphs: ${map.triumph}
+Despairs: ${map.despair}
+${map.light > 0 ? `Light Side: ${map.light}` : ''}
+${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
     }
     private formatSymbol(text: string, fontFamily: string): string {
         return `<span style="font-family: ${fontFamily}; font-weight: normal;">${text}</span>`;
