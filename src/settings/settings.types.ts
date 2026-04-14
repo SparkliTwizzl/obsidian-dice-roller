@@ -52,6 +52,7 @@ export interface DiceRollerSettings {
     viewResults: ViewResult[];
     enableChainRoller?: boolean;
     enableRollAliasing?: boolean;
+    enableAutoSaveAliasedRolls?: boolean;
     chainedResultSeparator?: string;
     allowChainedSeparatorLineBreaks?: boolean;
 }

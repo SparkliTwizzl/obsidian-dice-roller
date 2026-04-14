@@ -519,6 +519,19 @@ ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
                 this.original = this.alias;
             }
             this.app.workspace.trigger("dice-roller:new-result", this);
+
+            if (this.data?.enableRollAliasing && this.alias && (this.data as any).enableAutoSaveAliasedRolls) {
+                try {
+                    this.data.formulas = this.data.formulas ?? {};
+                    this.data.formulas[this.alias] = _orig;
+                    const plugin = (this.app as any)?.plugins?.getPlugin?.("obsidian-dice-roller");
+                    if (plugin && typeof plugin.saveSettings === "function") {
+                        await plugin.saveSettings();
+                    }
+                } catch (e) {
+                    console.error("Failed to auto-save aliased roll (narrative)", e);
+                }
+            }
         } finally {
             this.original = _orig;
         }
@@ -552,6 +565,20 @@ ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
                 this.original = this.alias;
             }
             this.app.workspace.trigger("dice-roller:new-result", this);
+
+            if (this.data?.enableRollAliasing && this.alias && (this.data as any).enableAutoSaveAliasedRolls) {
+                try {
+                    this.data.formulas = this.data.formulas ?? {};
+                    this.data.formulas[this.alias] = _orig;
+                    const plugin = (this.app as any)?.plugins?.getPlugin?.("obsidian-dice-roller");
+                    if (plugin && typeof plugin.saveSettings === "function") {
+                        // fire-and-forget in sync path
+                        plugin.saveSettings().catch((e: any) => console.error(e));
+                    }
+                } catch (e) {
+                    console.error("Failed to auto-save aliased roll (narrative sync)", e);
+                }
+            }
         } finally {
             this.original = _orig;
         }

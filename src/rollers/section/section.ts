@@ -221,9 +221,9 @@ export class SectionRoller extends GenericEmbeddedRoller<RollerCache> {
     }
 
     async roll(): Promise<RollerCache> {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             if (!this.loaded) {
-                this.once("loaded", () => {
+                this.once("loaded", async () => {
                     const options = [...this.options];
 
                     this.results = [...Array(this.rolls)]
@@ -236,10 +236,23 @@ export class SectionRoller extends GenericEmbeddedRoller<RollerCache> {
                             return option;
                         })
                         .filter((r) => r);
-                    this.render();
-                    this.trigger("new-result");
-                    this.result = this.results[0];
-                    resolve(this.results[0]);
+                        this.render();
+
+                        if (this.data?.enableRollAliasing && this.alias && (this.data as any).enableAutoSaveAliasedRolls) {
+                            try {
+                                this.data.formulas = this.data.formulas ?? {};
+                                this.data.formulas[this.alias] = this.original;
+                                const plugin = (this.app as any)?.plugins?.getPlugin?.("obsidian-dice-roller");
+                                if (plugin && typeof plugin.saveSettings === "function") {
+                                    await plugin.saveSettings();
+                                }
+                            } catch (e) {
+                                console.error("Failed to auto-save aliased roll (section)", e);
+                            }
+                        }
+                        this.trigger("new-result");
+                        this.result = this.results[0];
+                        resolve(this.results[0]);
                 });
                 this.load();
             } else {
@@ -256,6 +269,19 @@ export class SectionRoller extends GenericEmbeddedRoller<RollerCache> {
                     })
                     .filter((r) => r);
                 this.render();
+
+                if (this.data?.enableRollAliasing && this.alias && (this.data as any).enableAutoSaveAliasedRolls) {
+                    try {
+                        this.data.formulas = this.data.formulas ?? {};
+                        this.data.formulas[this.alias] = this.original;
+                        const plugin = (this.app as any)?.plugins?.getPlugin?.("obsidian-dice-roller");
+                        if (plugin && typeof plugin.saveSettings === "function") {
+                            await plugin.saveSettings();
+                        }
+                    } catch (e) {
+                        console.error("Failed to auto-save aliased roll (section)", e);
+                    }
+                }
                 this.trigger("new-result");
                 this.result = this.results[0];
                 resolve(this.results[0]);

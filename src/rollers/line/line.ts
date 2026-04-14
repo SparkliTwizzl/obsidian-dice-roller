@@ -118,9 +118,9 @@ export class LineRoller extends GenericEmbeddedRoller<string> {
     }
 
     async roll(): Promise<string> {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             if (!this.loaded) {
-                this.once("loaded", () => {
+                this.once("loaded", async () => {
                     const options = [...this.options];
 
                     this.results = [...Array(this.rolls)]
@@ -134,6 +134,19 @@ export class LineRoller extends GenericEmbeddedRoller<string> {
                         })
                         .filter((r) => r);
                     this.render();
+
+                    if (this.data?.enableRollAliasing && this.alias && (this.data as any).enableAutoSaveAliasedRolls) {
+                        try {
+                            this.data.formulas = this.data.formulas ?? {};
+                            this.data.formulas[this.alias] = this.original;
+                            const plugin = (this.app as any)?.plugins?.getPlugin?.("obsidian-dice-roller");
+                            if (plugin && typeof plugin.saveSettings === "function") {
+                                await plugin.saveSettings();
+                            }
+                        } catch (e) {
+                            console.error("Failed to auto-save aliased roll (line)", e);
+                        }
+                    }
                     this.trigger("new-result");
                     resolve(this.results[0]);
                 });
@@ -152,6 +165,19 @@ export class LineRoller extends GenericEmbeddedRoller<string> {
                     })
                     .filter((r) => r);
                 this.render();
+
+                if (this.data?.enableRollAliasing && this.alias && (this.data as any).enableAutoSaveAliasedRolls) {
+                    try {
+                        this.data.formulas = this.data.formulas ?? {};
+                        this.data.formulas[this.alias] = this.original;
+                        const plugin = (this.app as any)?.plugins?.getPlugin?.("obsidian-dice-roller");
+                        if (plugin && typeof plugin.saveSettings === "function") {
+                            await plugin.saveSettings();
+                        }
+                    } catch (e) {
+                        console.error("Failed to auto-save aliased roll (line)", e);
+                    }
+                }
                 this.trigger("new-result");
                 resolve(this.results[0]);
             }

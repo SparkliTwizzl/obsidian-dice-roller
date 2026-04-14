@@ -416,6 +416,19 @@ export default class SettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 });
             });
+
+        new Setting(containerEl)
+            .setName("Auto-Save Aliased Rolls")
+            .setDesc(
+                "When enabled, aliased rolls will be saved as a formula and can be referenced in other formulas."
+            )
+            .addToggle((t) => {
+                t.setValue(this.plugin.data.enableAutoSaveAliasedRolls ?? false);
+                t.onChange(async (v) => {
+                    this.plugin.data.enableAutoSaveAliasedRolls = v;
+                    await this.plugin.saveSettings();
+                });
+            });
     }
 
     buildTables(containerEl: HTMLDetailsElement) {

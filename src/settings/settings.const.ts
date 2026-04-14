@@ -41,6 +41,7 @@ export const DEFAULT_SETTINGS: DiceRollerSettings = {
     replaceDiceModInLivePreview: true,
     enableChainRoller: false,
     enableRollAliasing: false,
+    enableAutoSaveAliasedRolls: false,
     chainedResultSeparator: RESULT_SEPARATOR,
     allowChainedSeparatorLineBreaks: false,
     version: null,

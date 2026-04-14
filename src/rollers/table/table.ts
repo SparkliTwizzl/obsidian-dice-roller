@@ -459,6 +459,19 @@ export class TableRoller extends GenericFileRoller<string> {
                     getTooltip: () => this.getTooltip?.() ?? "",
                     original: this.data?.enableRollAliasing && this.alias ? this.alias : this.original
                 };
+
+                if (this.data?.enableRollAliasing && this.alias && (this.data as any).enableAutoSaveAliasedRolls) {
+                    try {
+                        this.data.formulas = this.data.formulas ?? {};
+                        this.data.formulas[this.alias] = this.original;
+                        const plugin = (this.app as any)?.plugins?.getPlugin?.("obsidian-dice-roller");
+                        if (plugin && typeof plugin.saveSettings === "function") {
+                            await plugin.saveSettings();
+                        }
+                    } catch (e) {
+                        console.error("Failed to auto-save aliased roll (table)", e);
+                    }
+                }
                 this.app.workspace.trigger("dice-roller:new-result", wrapper as any);
                 resolve(this.result);
             };

@@ -160,8 +160,21 @@ export class ChainRoller extends BasicRoller {
             getTooltip: () => this.getTooltip(),
             original: this.data?.enableRollAliasing && this.alias ? this.alias : (this as any).original
         };
-        this.app.workspace.trigger("dice-roller:new-result", wrapper as RenderableRoller<any>);
 
+        if (this.data?.enableRollAliasing && this.alias && (this.data as any).enableAutoSaveAliasedRolls) {
+            try {
+                this.data.formulas = this.data.formulas ?? {};
+                this.data.formulas[this.alias] = this.original;
+                const plugin = (this.app as any)?.plugins?.getPlugin?.("obsidian-dice-roller");
+                if (plugin && typeof plugin.saveSettings === "function") {
+                    await plugin.saveSettings();
+                }
+            } catch (e) {
+                console.error("Failed to auto-save aliased roll (chain)", e);
+            }
+        }
+
+        this.app.workspace.trigger("dice-roller:new-result", wrapper as RenderableRoller<any>);
         return this.result;
     }
 
