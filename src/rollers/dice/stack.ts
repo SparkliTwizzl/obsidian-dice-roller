@@ -277,7 +277,12 @@ export class StackRoller extends RenderableRoller<number> {
     signed: boolean;
     showRenderNotice: boolean;
     async getReplacer() {
-        let inline = this.showFormula ? `${this.inlineText} ` : "";
+        let inline = "";
+        if (this.showFormula) {
+            inline = this.data?.enableRollAliasing && this.alias && !this.data.displayResultsInline
+                ? `${this.alias} `
+                : `${this.inlineText}`;
+        }
         return `${inline}${this.result}`;
     }
     stunted: string = "";
@@ -286,6 +291,10 @@ export class StackRoller extends RenderableRoller<number> {
     isRendering: boolean = false;
     showFormula: boolean = false;
     getDisplayText() {
+        if (this.data?.enableRollAliasing && this.alias && !this.data.displayResultsInline) {
+            return this.alias;
+        }
+
         let text: string[] = [];
         let index = 0;
         this.children.forEach((dice) => {
@@ -307,25 +316,34 @@ export class StackRoller extends RenderableRoller<number> {
         return `${this.result}`;
     }
     getTooltip() {
+        const formulaLabel = this.data?.enableRollAliasing && this.alias
+            ? this.alias
+            : this.original;
+
         if (this.isRendering) {
-            return this.original;
+            return formulaLabel;
         }
-        if (this._tooltip) return this._tooltip;
+
+        if (this._tooltip) {
+            return this._tooltip;
+        }
+
         const display = this.getDisplayText();
         if (this.expectedValue === ExpectedValue.Roll || this.shouldRender) {
             if (this.displayFixedText) {
-                return `${this.original}\n${this.result} = ${display}`;
+                return `${formulaLabel}\n${this.result} = ${display}`;
             }
-            return `${this.original}\n${display}`;
-        }
-        if (this.expectedValue === ExpectedValue.Average) {
-            if (this.displayFixedText) {
-                return `${this.original}\n${this.result} = average: ${display}`;
-            }
-            return `${this.original}\naverage: ${display}`;
+            return `${formulaLabel}\n${display}`;
         }
 
-        return `${this.original}\nempty`;
+        if (this.expectedValue === ExpectedValue.Average) {
+            if (this.displayFixedText) {
+                return `${formulaLabel}\n${this.result} = average: ${display}`;
+            }
+            return `${formulaLabel}\naverage: ${display}`;
+        }
+
+        return `${formulaLabel}\nempty`;
     }
     allowAverage(): boolean {
         return this.dynamic.every((roller: DiceRoller) =>
