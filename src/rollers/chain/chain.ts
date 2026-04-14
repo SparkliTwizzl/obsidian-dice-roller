@@ -69,9 +69,10 @@ export class ChainRoller extends BasicRoller {
         original: string,
         subRollers: BasicRoller[],
         app: App,
-        position = data.position
+        position = data.position,
+        alias?: string | null,
     ) {
-        super(data, original, [] as any, position);
+        super(data, original, [] as any, position, alias);
         this.subRollers = subRollers;
         this.app = app;
     }

@@ -344,9 +344,10 @@ export class NarrativeStackRoller extends RenderableRoller<NarrativeResult> {
         public original: string,
         public lexemes: LexicalToken[],
         public app: App,
-        position = data.position
+        position = data.position,
+        alias?: string | null,
     ) {
-        super(data, original, lexemes, position);
+        super(data, original, lexemes, position, alias);
     }
     children: NarrativeRoller[] = [];
     getTooltip() {

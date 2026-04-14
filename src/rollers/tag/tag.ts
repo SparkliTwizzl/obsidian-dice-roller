@@ -30,9 +30,10 @@ abstract class DataViewEnabledRoller extends BasicRoller<SectionRoller> {
         public lexeme: LexicalToken,
         public source: string,
         public app: App,
-        position = data.position
+        position = data.position,
+        alias?: string | null,
     ) {
-        super(data, original, [lexeme], position);
+        super(data, original, [lexeme], position, alias);
     }
     guardDataview() {
         if (!DataviewManager.canUseDataview) {
@@ -234,9 +235,10 @@ export class DataViewRoller extends DataViewEnabledRoller {
         public lexeme: LexicalToken,
         public source: string,
         app: App,
-        position = data.position
+        position = data.position,
+        alias?: string | null,
     ) {
-        super(data, original, lexeme, source, app, position);
+        super(data, original, lexeme, source, app, position, alias);
 
         this.initialize();
     }
@@ -253,9 +255,10 @@ export class TagRoller extends DataViewEnabledRoller {
         public lexeme: LexicalToken,
         public source: string,
         app: App,
-        position = data.position
+        position = data.position,
+        alias?: string | null,
     ) {
-        super(data, original, lexeme, source, app, position);
+        super(data, original, lexeme, source, app, position, alias);
 
         this.initialize();
     }

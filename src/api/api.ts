@@ -241,7 +241,7 @@ class APIInstance {
         } = this.getParametersForRoller(raw, options);
 
         let content = rawContent;
-        let rollAlias: string | undefined;
+        let alias: string | undefined;
 
         let matchRegexPreservingQuotes = (content: string, matcher: RegExp) => {
             const m = content.match(matcher);
@@ -265,7 +265,7 @@ class APIInstance {
             if (this.data.enableRollAliasing && segments.last().includes(ROLL_ALIAS_INDICATOR)) {
                 let m = matchRegexPreservingQuotes(segments.last(), ROLL_ALIAS_REGEX);
                 if (m) {
-                    rollAlias = m.result.trim();
+                    alias = m.result.trim();
                     segments[segments.length - 1] = m.remainder;
                 }
             }
@@ -297,17 +297,13 @@ class APIInstance {
                 ? Object.assign({}, this.data, { chainedResultSeparator: overrideSeparator })
                 : this.data;
 
-            let roller = new ChainRoller(chainData, content, rollers, this.app, position);
-            if (rollAlias) {
-                roller.setAlias(rollAlias);
-            }
-            return roller;
+            return new ChainRoller(chainData, content, rollers, this.app, position, alias);
         }
         
         if (this.data.enableRollAliasing && content.includes(ROLL_ALIAS_INDICATOR)) {
             let m = matchRegexPreservingQuotes(content, ROLL_ALIAS_REGEX);
             if (m) {
-                rollAlias = m.result.trim();
+                alias = m.result.trim();
                 content = m.remainder;
             }
         }
@@ -323,17 +319,14 @@ class APIInstance {
         const type = this.#getTypeFromLexemes(lexemes);
         switch (type) {
             case "narrative": {
-                const roller = new NarrativeStackRoller(
+                return new NarrativeStackRoller(
                         this.data,
                         content,
                         lexemes,
                         this.app,
-                        position
+                        position,
+                        alias
                     );
-                if (rollAlias) {
-                    roller.setAlias(rollAlias);
-                }
-                return roller;
             }
             case "dice": {
                 const roller = new StackRoller(
@@ -346,45 +339,37 @@ class APIInstance {
                     expectedValue,
                     showParens,
                     round,
-                    signed
+                    signed,
+                    alias
                 );
                 roller.showFormula = showFormula;
                 roller.shouldRender = shouldRender;
                 roller.showRenderNotice = this.data.showRenderNotice;
                 roller.setSource(source);
-                if (rollAlias) {
-                    roller.setAlias(rollAlias);
-                }
                 return roller;
             }
             case "table": {
-                const roller = new TableRoller(
+                return new TableRoller(
                     this.data,
                     content,
                     lexemes[0],
                     source,
                     this.app,
                     position,
-                    lookup
+                    lookup,
+                    alias
                 );
-                if (rollAlias) {
-                    roller.setAlias(rollAlias);
-                }
-                return roller;
             }
             case "section": {
-                const roller = new SectionRoller(
+                return new SectionRoller(
                     this.data,
                     content,
                     lexemes[0],
                     source,
                     this.app,
-                    position
+                    position,
+                    alias
                 );
-                if (rollAlias) {
-                    roller.setAlias(rollAlias);
-                }
-                return roller;
             }
             case "dataview": {
                 if (!DataviewManager.canUseDataview) {
@@ -392,18 +377,15 @@ class APIInstance {
                         "Tags are only supported with the Dataview plugin installed."
                     );
                 }
-                const roller = new DataViewRoller(
+                return new DataViewRoller(
                     this.data,
                     content,
                     lexemes[0],
                     source,
                     this.app,
-                    position
+                    position,
+                    alias
                 );
-                if (rollAlias) {
-                    roller.setAlias(rollAlias);
-                }
-                return roller;
             }
             case "tag": {
                 if (!DataviewManager.canUseDataview) {
@@ -411,32 +393,26 @@ class APIInstance {
                         "Tags are only supported with the Dataview plugin installed."
                     );
                 }
-                const roller = new TagRoller(
+                return new TagRoller(
                     this.data,
                     content,
                     lexemes[0],
                     source,
                     this.app,
-                    position
+                    position,
+                    alias
                 );
-                if (rollAlias) {
-                    roller.setAlias(rollAlias);
-                }
-                return roller;
             }
             case "line": {
-                const roller = new LineRoller(
+                return new LineRoller(
                     this.data,
                     content,
                     lexemes[0],
                     source,
                     this.app,
-                    position
+                    position,
+                    alias
                 );
-                if (rollAlias) {
-                    roller.setAlias(rollAlias);
-                }
-                return roller;
             }
         }
     }

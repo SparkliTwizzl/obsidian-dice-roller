@@ -459,14 +459,18 @@ export class StackRoller extends RenderableRoller<number> {
         expectedValue = data.initialDisplay,
         displayFormulaAfter = data.displayFormulaAfter,
         round = data.round,
-        signed = data.signed
+        signed = data.signed,
+        alias?: string | null,
     ) {
-        super(data, original, lexemes, position);
+        super(data, original, lexemes, position, alias);
 
         if (displayFormulaAfter) {
+            const label = this.data?.enableRollAliasing && this.alias
+                ? this.alias
+                : this.original;
             this.containerEl.createSpan({
                 cls: "dice-roller-formula",
-                text: `(${original})`
+                text: `(${label})`
             });
         }
 

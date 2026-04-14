@@ -86,7 +86,8 @@ abstract class BareRoller<T> extends Roller<T> {
     constructor(
         public data: DiceRollerSettings,
         public original = "",
-        position: ButtonPosition = data.position
+        position: ButtonPosition = data.position,
+        alias?: string | null,
     ) {
         super();
         if (!this.original) this.original = "";
@@ -116,6 +117,10 @@ abstract class BareRoller<T> extends Roller<T> {
                 this.containerEl.addClass("no-icon");
                 break;
             }
+        }
+
+        if (alias) {
+            this.alias = alias;
         }
 
         this.containerEl.onclick = this.onClick.bind(this);
@@ -204,9 +209,10 @@ export abstract class BasicRoller<T = any> extends BareRoller<T> {
         public data: DiceRollerSettings,
         public original: string,
         public lexemes: LexicalToken[],
-        public position = data.position
+        public position = data.position,
+        alias?: string | null,
     ) {
-        super(data, original, position);
+        super(data, original, position, alias);
     }
 }
 
@@ -296,9 +302,10 @@ export abstract class GenericFileRoller<T> extends BasicRoller<T> {
         public lexeme: LexicalToken,
         public source: string,
         public app: App,
-        position = data.position
+        position = data.position,
+        alias?: string | null,
     ) {
-        super(data, original, [lexeme], position);
+        super(data, original, [lexeme], position, alias);
         this.getPath();
     }
     abstract getPath(): void;
@@ -377,9 +384,10 @@ export abstract class GenericEmbeddedRoller<T> extends GenericFileRoller<T> {
         source: string,
         public app: App,
         position = data.position,
-        public inline: boolean = true
+        alias?: string | null,
+        public inline: boolean = true,
     ) {
-        super(data, original, lexeme, source, app, position);
+        super(data, original, lexeme, source, app, position, alias);
         if (this.data.displayAsEmbed) {
             this.containerEl.addClasses(["has-embed", "markdown-embed"]);
             this.resultEl.addClass("internal-embed");
