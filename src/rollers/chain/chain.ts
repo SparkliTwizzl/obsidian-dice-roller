@@ -102,7 +102,12 @@ export class ChainRoller extends BasicRoller {
     }
 
     async getReplacer() {
-        let inline = this.shouldShowFormula ? `${this.inlineText} ` : "";
+        let inline = "";
+        if (this.shouldShowFormula) {
+            inline = this.data?.enableRollAliasing && this.alias && !this.data.displayResultsInline
+                ? `${this.alias} `
+                : `${this.inlineText} `;
+        }
         const inlineText = (this as any)._chainedInlineResult ?? this.result ?? "";
 
         // Ensure accidental real newlines are represented as literal escapes in
@@ -113,7 +118,11 @@ export class ChainRoller extends BasicRoller {
     }
 
     getTooltip() {
-        return this.subRollers.map((s) => s.getTooltip?.() ?? "").join("\n\n");
+        const inner = this.subRollers.map((s) => s.getTooltip?.() ?? "").join("\n\n");
+        const formulaLabel = this.data?.enableRollAliasing && this.alias
+            ? this.alias
+            : this.original;
+        return `${formulaLabel}\n\n${inner}`;
     }
 
     async roll() {
@@ -126,7 +135,7 @@ export class ChainRoller extends BasicRoller {
             getSource: () => (typeof (this as any).getSource === "function" ? (this as any).getSource() : ""),
             getResultText: () => (this as any).getResultText?.() ?? `${this.result}`,
             getTooltip: () => this.getTooltip(),
-            original: (this as any).original
+            original: this.data?.enableRollAliasing && this.alias ? this.alias : (this as any).original
         };
         this.app.workspace.trigger("dice-roller:new-result", wrapper as RenderableRoller<any>);
 
