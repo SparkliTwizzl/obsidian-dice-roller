@@ -36,6 +36,9 @@ export class SectionRoller extends GenericEmbeddedRoller<RollerCache> {
     async getReplacer() {
         const blockID = await this.getBlockId();
         if (blockID) {
+            if (this.data?.enableRollAliasing && this.alias && !this.data.displayResultsInline) {
+                return this.alias;
+            }
             return `![[${this.path}#^${blockID}]]`;
         }
         return ``;
@@ -45,7 +48,11 @@ export class SectionRoller extends GenericEmbeddedRoller<RollerCache> {
     levels: string[];
 
     getTooltip() {
-        return `${this.original}\n${this.path}`;
+        const formulaLabel = this.data?.enableRollAliasing && this.alias
+            ? this.alias
+            : this.original;
+
+        return `${formulaLabel}\n${this.path}`;
     }
     async build() {
         this.resultEl.empty();

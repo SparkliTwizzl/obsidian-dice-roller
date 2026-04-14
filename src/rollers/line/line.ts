@@ -11,6 +11,9 @@ import { Icons } from "src/utils/icons";
 
 export class LineRoller extends GenericEmbeddedRoller<string> {
     async getReplacer() {
+        if (this.data?.enableRollAliasing && this.alias && !this.data.displayResultsInline) {
+            return this.alias;
+        }
         return this.result;
     }
     result: string;
@@ -18,7 +21,11 @@ export class LineRoller extends GenericEmbeddedRoller<string> {
     content: string;
 
     getTooltip() {
-        return `${this.original}\n${this.path}`;
+        const formulaLabel = this.data?.enableRollAliasing && this.alias
+            ? this.alias
+            : this.original;
+
+        return `${formulaLabel}\n${this.path}`;
     }
     async build() {
         this.resultEl.empty();

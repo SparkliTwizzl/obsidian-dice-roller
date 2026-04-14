@@ -692,9 +692,6 @@ export class StackRoller extends RenderableRoller<number> {
         }
 
         this.trigger("new-result");
-        // If roll aliasing is enabled and an alias exists, temporarily substitute
-        // the original formula with the alias so listeners (e.g. Dice Tray)
-        // receive the alias in place of the full formula.
         let _orig = this.original;
         try {
             if (this.data?.enableRollAliasing && this.alias) {

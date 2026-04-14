@@ -16,6 +16,9 @@ abstract class DataViewEnabledRoller extends BasicRoller<SectionRoller> {
     results: SectionRoller[];
 
     async getReplacer() {
+        if (this.data?.enableRollAliasing && this.alias && !this.data.displayResultsInline) {
+            return this.alias;
+        }
         if (this.isLink) {
             return `[[${this.result.file.basename}]]`;
         }
@@ -127,6 +130,7 @@ abstract class DataViewEnabledRoller extends BasicRoller<SectionRoller> {
                         this.source,
                         this.app,
                         this.position,
+                        this.alias,
                         false
                     );
                     /* await roller.roll(); */
@@ -220,7 +224,10 @@ abstract class DataViewEnabledRoller extends BasicRoller<SectionRoller> {
     }
 
     getTooltip() {
-        return this.original;
+        const formulaLabel = this.data?.enableRollAliasing && this.alias
+            ? this.alias
+            : this.original;
+        return formulaLabel;
     }
 }
 

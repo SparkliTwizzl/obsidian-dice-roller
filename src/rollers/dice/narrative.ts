@@ -351,6 +351,10 @@ export class NarrativeStackRoller extends RenderableRoller<NarrativeResult> {
     }
     children: NarrativeRoller[] = [];
     getTooltip() {
+        const formulaLabel = this.data?.enableRollAliasing && this.alias
+            ? this.alias
+            : this.original;
+
         let map = {
             success: 0,
             failure: 0,
@@ -380,15 +384,15 @@ export class NarrativeStackRoller extends RenderableRoller<NarrativeResult> {
             map.light += die.light;
             map.dark += die.dark
         }
-        return `**Totals**
-Successes: ${map.success}
-Failures: ${map.failure}
-Advantages: ${map.advantage}
-Threats: ${map.threat}
-Triumphs: ${map.triumph}
-Despairs: ${map.despair}
-${map.light > 0 ? `Light Side: ${map.light}` : ''}
-${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
+        return `${formulaLabel}\n**Totals**
+        Successes: ${map.success}
+        Failures: ${map.failure}
+        Advantages: ${map.advantage}
+        Threats: ${map.threat}
+        Triumphs: ${map.triumph}
+        Despairs: ${map.despair}
+        ${map.light > 0 ? `Light Side: ${map.light}` : ''}
+        ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
     }
     private formatSymbol(text: string, fontFamily: string): string {
         return `<span style="font-family: ${fontFamily}; font-weight: normal;">${text}</span>`;
@@ -509,7 +513,15 @@ ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
         this.calculate();
 
         this.trigger("new-result");
-        this.app.workspace.trigger("dice-roller:new-result", this);
+        let _orig = this.original;
+        try {
+            if (this.data?.enableRollAliasing && this.alias) {
+                this.original = this.alias;
+            }
+            this.app.workspace.trigger("dice-roller:new-result", this);
+        } finally {
+            this.original = _orig;
+        }
 
         this.render();
         return this.result;
@@ -534,7 +546,15 @@ ${map.dark > 0 ? `Dark Side: ${map.dark}` : ''}`;
         this.hasRunOnce = true;
         this.calculate();
         this.trigger("new-result");
-        this.app.workspace.trigger("dice-roller:new-result", this);
+        let _orig = this.original;
+        try {
+            if (this.data?.enableRollAliasing && this.alias) {
+                this.original = this.alias;
+            }
+            this.app.workspace.trigger("dice-roller:new-result", this);
+        } finally {
+            this.original = _orig;
+        }
 
         this.render();
         return this.result;
