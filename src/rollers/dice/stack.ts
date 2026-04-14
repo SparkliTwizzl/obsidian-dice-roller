@@ -692,7 +692,18 @@ export class StackRoller extends RenderableRoller<number> {
         }
 
         this.trigger("new-result");
-        this.app.workspace.trigger("dice-roller:new-result", this);
+        // If roll aliasing is enabled and an alias exists, temporarily substitute
+        // the original formula with the alias so listeners (e.g. Dice Tray)
+        // receive the alias in place of the full formula.
+        let _orig = this.original;
+        try {
+            if (this.data?.enableRollAliasing && this.alias) {
+                this.original = this.alias;
+            }
+            this.app.workspace.trigger("dice-roller:new-result", this);
+        } finally {
+            this.original = _orig;
+        }
         this.hasRunOnce = true;
         return this.result;
     }
