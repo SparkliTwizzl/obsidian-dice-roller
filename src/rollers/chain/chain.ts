@@ -71,10 +71,25 @@ export class ChainRoller extends BasicRoller {
         app: App,
         position = data.position,
         alias?: string | null,
+        showFormula?: boolean,
+        displayFormulaAfter?: boolean,
     ) {
         super(data, original, [] as any, position, alias);
         this.subRollers = subRollers;
         this.app = app;
+        if (typeof showFormula === "boolean") {
+            this.showFormula = showFormula;
+        }
+
+        if (displayFormulaAfter) {
+            const label = this.data?.enableRollAliasing && this.alias
+                ? this.alias
+                : this.original;
+            this.containerEl.createSpan({
+                cls: "dice-roller-formula",
+                text: `(${label})`
+            });
+        }
     }
 
     addContexts(...components: any[]) {

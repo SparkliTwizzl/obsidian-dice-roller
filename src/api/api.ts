@@ -297,7 +297,7 @@ class APIInstance {
                 ? Object.assign({}, this.data, { chainedResultSeparator: overrideSeparator })
                 : this.data;
 
-            return new ChainRoller(chainData, content, rollers, this.app, position, alias);
+            return new ChainRoller(chainData, content, rollers, this.app, position, alias, showFormula, showParens);
         }
         
         if (this.data.enableRollAliasing && content.includes(ROLL_ALIAS_INDICATOR)) {
