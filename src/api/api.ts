@@ -263,7 +263,7 @@ class APIInstance {
                 .filter(s => s !== "");
 
             if (this.data.enableRollAliasing && segments.last().includes(ROLL_ALIAS_INDICATOR)) {
-                let m = matchRegexPreservingQuotes(segments.last(), ROLL_ALIAS_REGEX);
+                let m = matchRegexPreservingQuotes(segments.last(), CHAINED_ROLL_ALIAS_REGEX);
                 if (m) {
                     alias = m.result.trim();
                     segments[segments.length - 1] = m.remainder;
