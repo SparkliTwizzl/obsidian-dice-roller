@@ -5,7 +5,7 @@ import { RESULT_SEPARATOR } from "src/utils/constants";
 
 export class ChainRoller extends BasicRoller {
     result: string;
-    shouldShowFormula: boolean = false;
+    showFormula: boolean = false;
     subRollers: BasicRoller[] = [];
     app: App;
 
@@ -103,7 +103,7 @@ export class ChainRoller extends BasicRoller {
 
     async getReplacer() {
         let inline = "";
-        if (this.shouldShowFormula) {
+        if (this.showFormula) {
             inline = this.data?.enableRollAliasing && this.alias && !this.data.displayResultsInline
                 ? `${this.alias} `
                 : `${this.inlineText} `;
