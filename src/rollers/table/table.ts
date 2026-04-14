@@ -70,9 +70,16 @@ export class TableRoller extends GenericFileRoller<string> {
         this.header = header;
     }
     getTooltip() {
-        return this.prettyTooltip;
+        const formulaLabel = this.data?.enableRollAliasing && this.alias
+            ? this.alias
+            : this.original;
+
+        return `${formulaLabel}\n\n${this.prettyTooltip}`;
     }
     async getReplacer() {
+        if (this.data?.enableRollAliasing && this.alias && !this.data.displayResultsInline) {
+            return this.alias;
+        }
         return this.result;
     }
     result: string;
@@ -450,7 +457,7 @@ export class TableRoller extends GenericFileRoller<string> {
                     getSource: () => (typeof this.getSource === "function" ? this.getSource() : ""),
                     getResultText: () => this.getResultText?.() ?? `${this.result}`,
                     getTooltip: () => this.getTooltip?.() ?? "",
-                    original: this.original
+                    original: this.data?.enableRollAliasing && this.alias ? this.alias : this.original
                 };
                 this.app.workspace.trigger("dice-roller:new-result", wrapper as any);
                 resolve(this.result);
