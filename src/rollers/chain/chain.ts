@@ -110,7 +110,15 @@ export class ChainRoller extends BasicRoller {
             ? ((this as any)._chainedDisplayResult ?? this.result)
             : (this as any)._chainedInlineResult ?? this.result;
 
-        this.resultEl.setText(displayText ?? "");
+        let textToShow = displayText ?? "";
+        if (this.showFormula) {
+            const inline = this.data?.enableRollAliasing && this.alias && !this.data.displayResultsInline
+                ? `${this.alias} `
+                : `${this.inlineText}`;
+            textToShow = `${inline}${textToShow}`;
+        }
+
+        this.resultEl.setText(textToShow);
         if (displayText && displayText.includes("\n")) {
             (this.resultEl.style as any).whiteSpace = "pre-wrap";
         }
