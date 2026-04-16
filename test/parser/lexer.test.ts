@@ -681,3 +681,15 @@ test('Lexer should parse "1d20 -++---+-+--++17" like "1d20 - 17"', () => {
     let b = Lexer.parse("1d20 - 17").unwrap().map(toLexicalToken);
     expect(a).toEqual(b);
 });
+
+test('Lexer should parse "-1d4 + 1d2" like "0 - 1d4 + 1d2"', () => {
+    let a = Lexer.parse("-1d4 + 1d2").unwrap().map(toLexicalToken);
+    let b = Lexer.parse("0 - 1d4 + 1d2").unwrap().map(toLexicalToken);
+    expect(a).toEqual(b);
+});
+
+test('Lexer should parse "1d2 (-1d4 + 1d2)" like "1d2 (0 - 1d4 + 1d2)"', () => {
+    let a = Lexer.parse("1d2 (-1d4 + 1d2)").unwrap().map(toLexicalToken);
+    let b = Lexer.parse("1d2 (0 - 1d4 + 1d2)").unwrap().map(toLexicalToken);
+    expect(a).toEqual(b);
+});

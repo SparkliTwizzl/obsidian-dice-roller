@@ -274,15 +274,14 @@ class LexerClass {
             arr.splice(arr.length - 1, 1, newTop);
 
         tokens = tokens.reduce((acc, e) => {
-            // If a plus/minus appears at the start or immediately after an operator or "(",
-            // treat it as unary by inserting a leading 0 (e.g. "-1d6" -> "0 - 1d6").
-            const isOperator = (t: moo.Token) =>
-                t.type === "math" && /[+\-*/^]/u.test(String(t.value));
-
-            if (isPlusOrMinus(e) && (acc.length === 0 || (peek(acc).type === "math" && peek(acc).value === "(") || isOperator(peek(acc)))) {
-                acc.push({ type: "dice", value: "0", text: "0" } as moo.Token);
-                acc.push(e);
-                return acc;
+            if (isPlusOrMinus(e)) {
+                let isAtFormulaStart = acc.length === 0;
+                let isAfterOpenParen = acc.length > 0 && (peek(acc).type === "math" && peek(acc).value === "(");
+                if (isAtFormulaStart || isAfterOpenParen) {
+                    acc.push({ type: "dice", value: "0", text: "0" } as moo.Token);
+                    acc.push(e);
+                    return acc;
+                }
             }
 
             if (acc.length == 0) {
