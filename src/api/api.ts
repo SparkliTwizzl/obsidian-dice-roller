@@ -272,24 +272,43 @@ class APIInstance implements APIInterface {
         }
         const lexemes = lexemeResult.unwrap();
 
+        let resultSeparator: string | undefined;
         const segments: string[] = [];
-        let currentSegment: string[] = [];
-        let overrideSeparator: string | undefined;
 
-        for (const t of lexemes) {
-            if (t.type === LEXEME_TYPE_RESULT_SEPARATOR) {
-                overrideSeparator = (t as any).value ?? t.value;
-                continue;
+        let buildSegment = (lexemes: LexicalToken[]) => {
+            let segment: string[] = [];
+            for (let i = 0; i < lexemes.length; ++i) {
+                const lexeme = lexemes[i];
+                if (lexeme.type === LEXEME_TYPE_RESULT_SEPARATOR) {
+                    resultSeparator = lexeme.value;
+                    continue;
+                }
+                if (lexeme.type === LEXEME_TYPE_CHAINED_ROLL_DELIMITER) {
+                    return {
+                        segment: segment.join("").trim(),
+                        remainder: lexemes.slice(0, i)
+                    }
+                }
+                segment.push((lexeme.value ?? "").trim());
             }
-            if (t.type === LEXEME_TYPE_CHAINED_ROLL_DELIMITER) {
-                segments.push(currentSegment.join("").trim());
-                currentSegment = [];
-                continue;
+            if (segment.length > 0) {
+                return {
+                    segment: segment.join("").trim(),
+                    remainder: []
+                }
             }
-            currentSegment.push((t.value ?? "").trim());
+                return {
+                    segment: null,
+                    remainder: []
+                }
         }
-        if (currentSegment.length > 0) {
-            segments.push(currentSegment.join("").trim());
+
+        for (let remainder = lexemes; remainder.length > 0;) {
+            let next = buildSegment(remainder);
+            if (next.segment) {
+                segments.push(next.segment);
+            }
+            remainder = next.remainder;
         }
 
         const rollers: BasicRoller[] = [];
@@ -305,8 +324,8 @@ class APIInstance implements APIInterface {
             rollers.push(roller);
         }
 
-        const chainData = overrideSeparator
-            ? Object.assign({}, this.data, { chainedResultSeparator: overrideSeparator })
+        const chainData = resultSeparator
+            ? Object.assign({}, this.data, { chainedResultSeparator: resultSeparator })
             : this.data;
 
         return new ChainRoller(chainData, raw, rollers, this.app, options.position);
