@@ -549,50 +549,21 @@ test('Lexer should parse "6dF"', () => {
 
 // CHAINED ROLLS ==============================================================
 
-test('Lexer should not parse "1d6; 1d4" when ChainRoller is disabled', () => {
+test('Lexer should not parse "1d6; 1d4 * (1d2 - 1); ~\"|\"" when ChainRoller is disabled', () => {
     let _prev = Lexer.isChainRollerEnabled;
     Lexer.setEnableChainRoller(false);
 
-    let actual = Lexer.parse("1d6; 1d4").unwrapErr();
+    let actual = Lexer.parse("1d6; 1d4 * (1d2 - 1); ~\"|\"").unwrapErr();
     expect(actual).toEqual("Could not parse");
 
     Lexer.setEnableChainRoller(_prev);
 });
 
-test('Lexer should parse "1d6; 1d4" when ChainRoller is enabled', () => {
+test('Lexer should parse "1d6; 1d4 * (1d2 - 1); ~\"|\"" when ChainRoller is enabled', () => {
     let _prev = Lexer.isChainRollerEnabled;
     Lexer.setEnableChainRoller(true);
 
-    let actual = Lexer.parse("1d6; 1d4").unwrap().map(toLexicalToken);
-    expect(actual).toEqual([
-        {
-            conditions: undefined,
-            parenedDice: undefined,
-            type: "dice",
-            value: "1d6"
-        },
-        {
-            conditions: undefined,
-            parenedDice: undefined,
-            type: "chainedRollDelimiter",
-            value: ";"
-        },
-        {
-            conditions: undefined,
-            parenedDice: undefined,
-            type: "dice",
-            value: "1d4"
-        }
-    ]);
-
-    Lexer.setEnableChainRoller(_prev);
-});
-
-test('Lexer should parse "1d6; 1d4; ~", "" when ChainRoller is enabled', () => {
-    let _prev = Lexer.isChainRollerEnabled;
-    Lexer.setEnableChainRoller(true);
-
-    let actual = Lexer.parse('1d6; 1d4; ~", "').unwrap().map(toLexicalToken);
+    let actual = Lexer.parse("1d6; 1d4 * (1d2 - 1); ~\"|\"").unwrap().map(toLexicalToken);
     expect(actual).toEqual([
         {
             conditions: undefined,
@@ -615,14 +586,38 @@ test('Lexer should parse "1d6; 1d4; ~", "" when ChainRoller is enabled', () => {
         {
             conditions: undefined,
             parenedDice: undefined,
+            type: "math",
+            value: "*"
+        },
+        {
+            conditions: undefined,
+            parenedDice: undefined,
+            type: "dice",
+            value: "1d2"
+        },
+        {
+            conditions: undefined,
+            parenedDice: undefined,
+            type: "math",
+            value: "-"
+        },
+        {
+            conditions: undefined,
+            parenedDice: undefined,
+            type: "dice",
+            value: "1"
+        },
+        {
+            conditions: undefined,
+            parenedDice: undefined,
             type: "chainedRollDelimiter",
             value: ";"
         },
         {
             conditions: undefined,
             parenedDice: undefined,
-            type: "resultSeparatorOverride",
-            value: ", "
+            type: "resultSeparator",
+            value: "|"
         }
     ]);
 
