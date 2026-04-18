@@ -25,7 +25,7 @@ export const LEXEME_TYPE_LINE = "line";
 export const LEXEME_TYPE_LINK = "link";
 export const LEXEME_TYPE_MATH = "math";
 export const LEXEME_TYPE_NARRATIVE = "narrative";
-export const LEXEME_TYPE_RESULT_SEPARATOR = "result-separator";
+export const LEXEME_TYPE_RESULT_SEPARATOR = "resultSeparator";
 export const LEXEME_TYPE_SECTION = "section";
 export const LEXEME_TYPE_TABLE = "table";
 export const LEXEME_TYPE_TAG = "tag";
@@ -257,7 +257,7 @@ class LexerClass {
                 match: CHAINED_ROLL_REGEX,
                 value: CHAINED_ROLL_DELIMITER
             };
-            rules.resultSeparatorOverride = {
+            rules.resultSeparator = {
                 match: RESULT_SEPARATOR_REGEX,
                 value: (match: string) => {
                     return match
