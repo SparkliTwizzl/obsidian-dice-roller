@@ -127,6 +127,7 @@ class APIInstance implements APIInterface {
     initialize(data: DiceRollerSettings, app: App) {
         this.data = data;
         this.app = app;
+        Lexer.setEnableChainRoller(this.data?.enableChainRoller);
     }
 
     #getTypeFromLexemes(lexemes: LexicalToken[]) {
