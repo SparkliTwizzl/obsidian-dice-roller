@@ -58,6 +58,23 @@ export interface RollerOptions {
     lookup?: string;
 }
 
+const PARAM_AVG = "|avg";
+const PARAM_CEIL = "|ceil";
+const PARAM_FLOOR = "|floor";
+const PARAM_FORM = "|form";
+const PARAM_NODICE = "|nodice";
+const PARAM_NOFORM = "|noform";
+const PARAM_NONE = "|none";
+const PARAM_NOPAREN = "|noparen";
+const PARAM_NORENDER = "|norender";
+const PARAM_NOROUND = "|noround";
+const PARAM_LOOKUP = "|lookup=";
+const PARAM_PAREN = "|paren";
+const PARAM_RENDER = "|render";
+const PARAM_ROUND = "|round";
+const PARAM_SIGNED = "|signed";
+const PARAM_TEXT = "|text(";
+
 declare global {
     interface Window {
         DiceRoller: APIInstance;
@@ -160,54 +177,54 @@ class APIInstance implements APIInterface {
         const regextext = /\|text\((.*)\)/;
 
         //Flags always take precedence.
-        if (content.includes("|nodice")) {
+        if (content.includes(PARAM_NODICE)) {
             position = ButtonPosition.NONE;
         }
-        if (content.includes("|render")) {
+        if (content.includes(PARAM_RENDER)) {
             shouldRender = true;
         }
-        if (content.includes("|norender")) {
+        if (content.includes(PARAM_NORENDER)) {
             shouldRender = false;
         }
-        if (content.includes("|form")) {
+        if (content.includes(PARAM_FORM)) {
             showFormula = true;
         }
-        if (content.includes("|noform")) {
+        if (content.includes(PARAM_NOFORM)) {
             showFormula = false;
         }
-        if (content.includes("|avg")) {
+        if (content.includes(PARAM_AVG)) {
             expectedValue = ExpectedValue.Average;
         }
-        if (content.includes("|none")) {
+        if (content.includes(PARAM_NONE)) {
             expectedValue = ExpectedValue.None;
         }
-        if (content.includes("|text(")) {
+        if (content.includes(PARAM_TEXT)) {
             let [, matched] = content.match(regextext) ?? [null, ""];
             text = matched;
         }
-        if (content.includes("|paren")) {
+        if (content.includes(PARAM_PAREN)) {
             showParens = true;
         }
-        if (content.includes("|noparen")) {
+        if (content.includes(PARAM_NOPAREN)) {
             showParens = false;
         }
 
-        if (content.includes("|round")) {
+        if (content.includes(PARAM_ROUND)) {
             round = Round.Normal;
         }
-        if (content.includes("|noround")) {
+        if (content.includes(PARAM_NOROUND)) {
             round = Round.None;
         }
-        if (content.includes("|ceil")) {
+        if (content.includes(PARAM_CEIL)) {
             round = Round.Up;
         }
-        if (content.includes("|floor")) {
+        if (content.includes(PARAM_FLOOR)) {
             round = Round.Down;
         }
-        if (content.includes("|signed")) {
+        if (content.includes(PARAM_SIGNED)) {
             signed = true;
         }
-        if (content.includes("|lookup=")) {
+        if (content.includes(PARAM_LOOKUP)) {
             [, lookup] = content.match(/\|lookup=(.+?)(?:\||$)/) ?? [];
         }
 
@@ -424,49 +441,49 @@ class APIInstance implements APIInterface {
         const options =
             this.sources.get(source) ?? this.getRollerOptions(this.data);
         if ("position" in options) {
-            roll += options.position !== ButtonPosition.NONE ? "" : "|nodice";
+            roll += options.position !== ButtonPosition.NONE ? "" : PARAM_NODICE;
         }
         if ("shouldRender" in options) {
-            roll += options.shouldRender ? "|render" : "|norender";
+            roll += options.shouldRender ? PARAM_RENDER : PARAM_NORENDER;
         }
         if ("showFormula" in options) {
-            roll += options.showFormula ? "|form" : "|noform";
+            roll += options.showFormula ? PARAM_FORM : PARAM_NOFORM;
         }
         if ("expectedValue" in options) {
             if (options.expectedValue == ExpectedValue.Average) {
-                roll += "|avg";
+                roll += PARAM_AVG;
             }
             if (options.expectedValue == ExpectedValue.None) {
-                roll += "|none";
+                roll += PARAM_NONE;
             }
         }
         if ("text" in options && options.text) {
-            roll += "|text(" + options.text + ")";
+            roll += PARAM_TEXT + options.text + ")";
         }
         if ("showParens" in options) {
-            roll += options.showParens ? "|paren" : "|noparen";
+            roll += options.showParens ? PARAM_PAREN : PARAM_NOPAREN;
         }
         if ("round" in options) {
             switch (options.round) {
                 case Round.Down: {
-                    roll += "|floor";
+                    roll += PARAM_FLOOR;
                     break;
                 }
                 case Round.Up: {
-                    roll += "|ceil";
+                    roll += PARAM_CEIL;
                     break;
                 }
                 case Round.Normal: {
-                    roll += "|round";
+                    roll += PARAM_ROUND;
                     break;
                 }
                 case Round.None: {
-                    roll += "|noround";
+                    roll += PARAM_NOROUND;
                 }
             }
         }
         if (options.signed) {
-            roll += "|signed";
+            roll += PARAM_SIGNED;
         }
         return roll;
     }
