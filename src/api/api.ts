@@ -6,7 +6,20 @@ import {
 import { ExpectedValue, Round } from "../types/api";
 
 import { decode } from "he";
-import { Lexer, type LexicalToken } from "../lexer/lexer";
+import {
+    LEXEME_TYPE_CHAINED_ROLL_DELIMITER,
+    LEXEME_TYPE_DATAVIEW,
+    LEXEME_TYPE_DICE,
+    LEXEME_TYPE_LINE,
+    LEXEME_TYPE_LINK,
+    LEXEME_TYPE_NARRATIVE,
+    LEXEME_TYPE_RESULT_SEPARATOR,
+    LEXEME_TYPE_SECTION,
+    LEXEME_TYPE_TABLE,
+    LEXEME_TYPE_TAG,
+    Lexer,
+    type LexicalToken
+} from "../lexer/lexer";
 import type { App } from "obsidian";
 
 import { DataviewManager } from "./api.dataview";
@@ -100,28 +113,31 @@ class APIInstance implements APIInterface {
     }
 
     #getTypeFromLexemes(lexemes: LexicalToken[]) {
-        if (lexemes.some(({ type }) => type === "table")) {
-            return "table";
+        if (lexemes.some(({ type }) => type === LEXEME_TYPE_TABLE)) {
+            return LEXEME_TYPE_TABLE;
         }
-        if (lexemes.some(({ type }) => type === "section")) {
-            return "section";
+        if (lexemes.some(({ type }) => type === LEXEME_TYPE_SECTION)) {
+            return LEXEME_TYPE_SECTION;
         }
-        if (lexemes.some(({ type }) => type === "dataview")) {
-            return "dataview";
+        if (lexemes.some(({ type }) => type === LEXEME_TYPE_DATAVIEW)) {
+            return LEXEME_TYPE_DATAVIEW;
         }
-        if (lexemes.some(({ type }) => type === "tag")) {
-            return "tag";
+        if (lexemes.some(({ type }) => type === LEXEME_TYPE_TAG)) {
+            return LEXEME_TYPE_TAG;
         }
-        if (lexemes.some(({ type }) => type === "link")) {
-            return "link";
+        if (lexemes.some(({ type }) => type === LEXEME_TYPE_LINK)) {
+            return LEXEME_TYPE_LINK;
         }
-        if (lexemes.some(({ type }) => type === "line")) {
-            return "line";
+        if (lexemes.some(({ type }) => type === LEXEME_TYPE_LINE)) {
+            return LEXEME_TYPE_LINE;
         }
-        if (lexemes.some(({ type }) => type === "narrative")) {
-            return "narrative";
+        if (lexemes.some(({ type }) => type === LEXEME_TYPE_NARRATIVE)) {
+            return LEXEME_TYPE_NARRATIVE;
         }
-        return "dice";
+        if (lexemes.some(({ type }) => type === LEXEME_TYPE_CHAINED_ROLL_DELIMITER)) {
+            return LEXEME_TYPE_CHAINED_ROLL_DELIMITER;
+        }
+        return LEXEME_TYPE_DICE;
     }
     getParametersForRoller(
         content: string,
@@ -243,11 +259,11 @@ class APIInstance implements APIInterface {
         let overrideSeparator: string | undefined;
 
         for (const t of lexemes) {
-            if (t.type === "resultSeparatorOverride") {
+            if (t.type === LEXEME_TYPE_RESULT_SEPARATOR) {
                 overrideSeparator = (t as any).value ?? t.value;
                 continue;
             }
-            if (t.type === "chainedRollDelimiter") {
+            if (t.type === LEXEME_TYPE_CHAINED_ROLL_DELIMITER) {
                 segments.push(currentSegment.join("").trim());
                 currentSegment = [];
                 continue;
@@ -309,7 +325,7 @@ class APIInstance implements APIInterface {
 
         const type = this.#getTypeFromLexemes(lexemes);
         switch (type) {
-            case "narrative": {
+            case LEXEME_TYPE_NARRATIVE: {
                 return new NarrativeStackRoller(
                         this.data,
                         content,
@@ -318,7 +334,7 @@ class APIInstance implements APIInterface {
                         position
                     );
             }
-            case "dice": {
+            case LEXEME_TYPE_DICE: {
                 const roller = new StackRoller(
                     this.data,
                     content,
@@ -338,7 +354,7 @@ class APIInstance implements APIInterface {
                 roller.setSource(source);
                 return roller;
             }
-            case "table": {
+            case LEXEME_TYPE_TABLE: {
                 const roller = new TableRoller(
                     this.data,
                     content,
@@ -350,7 +366,7 @@ class APIInstance implements APIInterface {
                 );
                 return roller;
             }
-            case "section": {
+            case LEXEME_TYPE_SECTION: {
                 return new SectionRoller(
                     this.data,
                     content,
@@ -360,7 +376,7 @@ class APIInstance implements APIInterface {
                     position
                 );
             }
-            case "dataview": {
+            case LEXEME_TYPE_DATAVIEW: {
                 if (!DataviewManager.canUseDataview) {
                     throw new Error(
                         "Tags are only supported with the Dataview plugin installed."
@@ -375,7 +391,7 @@ class APIInstance implements APIInterface {
                     position
                 );
             }
-            case "tag": {
+            case LEXEME_TYPE_TAG: {
                 if (!DataviewManager.canUseDataview) {
                     throw new Error(
                         "Tags are only supported with the Dataview plugin installed."
@@ -390,7 +406,7 @@ class APIInstance implements APIInterface {
                     position
                 );
             }
-            case "line": {
+            case LEXEME_TYPE_LINE: {
                 return new LineRoller(
                     this.data,
                     content,

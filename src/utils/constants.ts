@@ -5,8 +5,8 @@ export const DATAVIEW_REGEX = /(?:(?<roll>\d+)[Dd]?)?dv\((?<query>.+)\)(?:\|(?<c
 export const DICE_REGEX = /(?<dice>(?<roll>\d+)(?:[Dd]?\[?(?:-?\d+\s?,)?\s?(?:-?\d+|%|F)\]?)?)(?<conditional>(?:(?:=|=!|<|>|<=|>=|=<|=>|\-=|=\-)\d+)*)?/;
 export const MATH_REGEX = /[\(\^\+\-\*\/\)]/;
 export const OMITTED_REGEX = /(?<roll>\d+)?[Dd](?<faces>\[?(?:-?\d+\s?,)?\s?(?:-?\d+|%|F)\]?)?(?<conditional>(?:(?:=|=!|<|>|<=|>=|=<|=>|\-=|=\-)\d+)*)?/;
-export const RESULT_SEPARATOR_OVERRIDE_INDICATOR = "~";
-export const RESULT_SEPARATOR_OVERRIDE_REGEX = new RegExp(`^${RESULT_SEPARATOR_OVERRIDE_INDICATOR}"(?<override>.*)"$`, "s");
+export const RESULT_SEPARATOR_INDICATOR = "~";
+export const RESULT_SEPARATOR_REGEX = new RegExp(`^${RESULT_SEPARATOR_INDICATOR}"(?<override>.*)"$`, "s");
 export const SECTION_REGEX = /(?:(?<roll>\d+)[Dd])?(?:\[.*\]\(|\[\[)(?<link>.+)(?:\]\]|\))\|?(?<types>.+)?/;
 export const TABLE_REGEX = /(?<diceRoll>.*)?(?:\[.*\]\(|\[\[)(?<link>.+?)#?\^(?<block>.+?)(?:\]\]|\))(?:\|(?<header>.+))?/;
 export const TAG_REGEX = /(?:(?<roll>\d+)[Dd])?#(?<query>[\p{Letter}\p{Emoji_Presentation}\w/-]+)(?:\|(?<collapse>[\+-]))?(?:\|(?<types>[^\+-]+))?/u;

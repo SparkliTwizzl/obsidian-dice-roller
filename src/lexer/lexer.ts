@@ -4,25 +4,32 @@ import { DataviewManager } from "src/api/api.dataview";
 import type { Conditional } from "src/rollers/dice/dice";
 import {
     CHAINED_ROLL_DELIMITER,
-    RESULT_SEPARATOR_OVERRIDE_INDICATOR
+    RESULT_SEPARATOR_INDICATOR
 } from "src/utils/constants";
 
-export const CHAINED_ROLL_DETECTION_REGEX = new RegExp(`${CHAINED_ROLL_DELIMITER}`, "u");
 export const CHAINED_ROLL_REGEX = new RegExp(`${CHAINED_ROLL_DELIMITER}`, "u");
 export const CONDITIONAL_REGEX = /(?:=|=!|<|>|<=|>=|=<|=>|-=|=-)(?:\d+(?:[Dd](?:%|F|-?\d+|\[\d+(?:[ \t]*[,-][ \t]*\d+)+\]|\b))?)/u;
 export const DATAVIEW_REGEX = /(?:\d+[Dd]?)?dv\((?:.+)\)(?:\|(?:[+-]))?(?:\|(?:[^+-]+))?/u;
 export const LINE_REGEX = /(?:\d+[Dd])?(?:\[.*\]\(|\[\[)(?:.+)(?:\)|\]\])\|line/u;
 export const MATH_REGEX = /[\(\^\+\-\*\/\)]/u;
 export const OMITTED_REGEX = /(?:\d+|\b)[Dd](?:%|F|-?\d+|\[\d+(?:[ \t]*[,-][ \t]*\d+)+\]|\b)/u;
-export const RESULT_SEPARATOR_OVERRIDE_REGEX = new RegExp(`${RESULT_SEPARATOR_OVERRIDE_INDICATOR}\\s*".*"`, "u");
+export const RESULT_SEPARATOR_REGEX = new RegExp(`${RESULT_SEPARATOR_INDICATOR}\\s*".*"`, "u");
 export const SECTION_REGEX = /(?:\d+[Dd])?(?:\[.*\]\(|\[\[)(?:.+)(?:\)|\]\])\|?(?:.+)?/u;
 export const TABLE_REGEX = /(?:.*)?(?:\[.*\]\(|\[\[)(?:.+?)#?\^(?:.+?)(?:\)|\]\])\|?(?:.+)?/u;
 export const TAG_REGEX = /(?:\d+[Dd])?#(?:[\p{Letter}\p{Emoji_Presentation}\w/-]+)(?:\|(?:[+-]))?(?:\|(?:[^+-]+))?/u;
 
-const TOKEN_TYPE_CHAINED_ROLL_DELIMITER = "chainedRollDelimiter";
-const TOKEN_TYPE_DICE = "dice";
-const TOKEN_TYPE_MATH = "math";
-const TOKEN_TYPE_WHITESPACE = "WS";
+export const LEXEME_TYPE_CHAINED_ROLL_DELIMITER = "chainedRollDelimiter";
+export const LEXEME_TYPE_DATAVIEW = "dataview";
+export const LEXEME_TYPE_DICE = "dice";
+export const LEXEME_TYPE_LINE = "line";
+export const LEXEME_TYPE_LINK = "link";
+export const LEXEME_TYPE_MATH = "math";
+export const LEXEME_TYPE_NARRATIVE = "narrative";
+export const LEXEME_TYPE_RESULT_SEPARATOR = "result-separator";
+export const LEXEME_TYPE_SECTION = "section";
+export const LEXEME_TYPE_TABLE = "table";
+export const LEXEME_TYPE_TAG = "tag";
+export const LEXEME_TYPE_WHITESPACE = "WS";
 
 const ASSOC_LEFT = "left";
 const ASSOC_RIGHT = "right"
@@ -54,7 +61,7 @@ class Parser {
                 case ")":
                     if (
                         input[index] &&
-                        input[index].type == TOKEN_TYPE_DICE &&
+                        input[index].type == LEXEME_TYPE_DICE &&
                         /^d/.test(input[index].value)
                     ) {
                         input[index].parenedDice = true;
@@ -251,10 +258,10 @@ class LexerClass {
                 value: CHAINED_ROLL_DELIMITER
             };
             rules.resultSeparatorOverride = {
-                match: RESULT_SEPARATOR_OVERRIDE_REGEX,
+                match: RESULT_SEPARATOR_REGEX,
                 value: (match: string) => {
                     return match
-                        .replace(new RegExp(`${RESULT_SEPARATOR_OVERRIDE_INDICATOR}`, "g"), "")
+                        .replace(new RegExp(`${RESULT_SEPARATOR_INDICATOR}`, "g"), "")
                         .replace(/"/g, "");
                 }
             };
@@ -296,13 +303,13 @@ class LexerClass {
     }
     transform(tokens: moo.Token[]): LexicalToken[] {
         tokens = tokens.filter((token) => {
-            return token.type != TOKEN_TYPE_WHITESPACE;
+            return token.type != LEXEME_TYPE_WHITESPACE;
         });
 
         let isPlus = (t: moo.Token) =>
-            t.type === "+" || (t.type === TOKEN_TYPE_MATH && t.value === "+");
+            t.type === "+" || (t.type === LEXEME_TYPE_MATH && t.value === "+");
         let isMinus = (t: moo.Token) =>
-            t.type === "-" || (t.type === TOKEN_TYPE_MATH && t.value === "-");
+            t.type === "-" || (t.type === LEXEME_TYPE_MATH && t.value === "-");
         let isPlusOrMinus = (t: moo.Token) => isPlus(t) || isMinus(t);
         let peek = (arr: moo.Token[]) => arr[arr.length - 1];
         let replaceTop = (arr: moo.Token[], newTop: moo.Token) =>
@@ -310,7 +317,7 @@ class LexerClass {
 
         let parenStack: string[] = [];
         tokens = tokens.reduce((acc, e) => {
-            if (e.type === TOKEN_TYPE_MATH) {
+            if (e.type === LEXEME_TYPE_MATH) {
                 if (e.value === "(") {
                     parenStack.push(e.value);
                 }
@@ -319,15 +326,15 @@ class LexerClass {
                 }
             }
 
-            if (this.isChainRollerEnabled && e.type === TOKEN_TYPE_CHAINED_ROLL_DELIMITER && parenStack.length > 0) {
+            if (this.isChainRollerEnabled && e.type === LEXEME_TYPE_CHAINED_ROLL_DELIMITER && parenStack.length > 0) {
                 throw new Error(`Chained roll delimiters (${CHAINED_ROLL_DELIMITER}) cannot be inside parentheses.`);
             }
 
             if (isPlusOrMinus(e)) {
                 let isAtFormulaStart = acc.length === 0;
-                let isAfterOpenParen = acc.length > 0 && (peek(acc).type === TOKEN_TYPE_MATH && peek(acc).value === "(");
+                let isAfterOpenParen = acc.length > 0 && (peek(acc).type === LEXEME_TYPE_MATH && peek(acc).value === "(");
                 if (isAtFormulaStart || isAfterOpenParen) {
-                    acc.push({ type: TOKEN_TYPE_DICE, value: "0", text: "0" } as moo.Token);
+                    acc.push({ type: LEXEME_TYPE_DICE, value: "0", text: "0" } as moo.Token);
                     acc.push(e);
                     return acc;
                 }
@@ -343,7 +350,7 @@ class LexerClass {
                         // one minus => minus
                         if (!isMinus(top)) replaceTop(acc, e);
                     } else if (isMinus(top)) {
-                        top.type = top.type === TOKEN_TYPE_MATH ? top.type : "+";
+                        top.type = top.type === LEXEME_TYPE_MATH ? top.type : "+";
                         top.value = "+";
                     }
                 } else {
