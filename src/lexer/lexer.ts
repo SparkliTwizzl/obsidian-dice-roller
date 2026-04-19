@@ -7,7 +7,6 @@ import {
     RESULT_SEPARATOR_INDICATOR
 } from "src/utils/constants";
 
-export const CHAINED_ROLL_REGEX = new RegExp(`${CHAINED_ROLL_DELIMITER}`, "u");
 export const CONDITIONAL_REGEX = /(?:=|=!|<|>|<=|>=|=<|=>|-=|=-)(?:\d+(?:[Dd](?:%|F|-?\d+|\[\d+(?:[ \t]*[,-][ \t]*\d+)+\]|\b))?)/u;
 export const DATAVIEW_REGEX = /(?:\d+[Dd]?)?dv\((?:.+)\)(?:\|(?:[+-]))?(?:\|(?:[^+-]+))?/u;
 export const LINE_REGEX = /(?:\d+[Dd])?(?:\[.*\]\(|\[\[)(?:.+)(?:\)|\]\])\|line/u;
@@ -18,6 +17,7 @@ export const SECTION_REGEX = /(?:\d+[Dd])?(?:\[.*\]\(|\[\[)(?:.+)(?:\)|\]\])\|?(
 export const TABLE_REGEX = /(?:.*)?(?:\[.*\]\(|\[\[)(?:.+?)#?\^(?:.+?)(?:\)|\]\])\|?(?:.+)?/u;
 export const TAG_REGEX = /(?:\d+[Dd])?#(?:[\p{Letter}\p{Emoji_Presentation}\w/-]+)(?:\|(?:[+-]))?(?:\|(?:[^+-]+))?/u;
 
+export const LEXEME_TYPE_CHAINED_ROLL = "chainedRoll";
 export const LEXEME_TYPE_CHAINED_ROLL_DELIMITER = "chainedRollDelimiter";
 export const LEXEME_TYPE_DATAVIEW = "dataview";
 export const LEXEME_TYPE_DICE = "dice";
@@ -146,129 +146,108 @@ class LexerClass {
                 associativity: ASSOC_RIGHT
             }
         });
-        this.#buildRules();
     }
 
-    lexer: moo.Lexer;
+    lexer = moo.compile({
+        WS: [{ match: /[ \t]+/u }, { match: /[{}]+/u }],
+        table: TABLE_REGEX,
+        line: LINE_REGEX,
+        section: SECTION_REGEX,
+        tag: TAG_REGEX,
+        dataview: DATAVIEW_REGEX,
+
+        condition: CONDITIONAL_REGEX,
+
+        kl: { match: /kl\d*/u, value: this.clampInfinite },
+        kh: [
+            { match: /kh\d*/u, value: this.clampInfinite },
+            { match: /k\d*/u, value: this.clampInfinite }
+        ],
+        dh: { match: /dh\d*/u, value: this.clampInfinite },
+        dl: [{ match: /dl\d*/u, value: this.clampInfinite }],
+        "!!": {
+            match: /!!(?:i|\d+)?/u,
+            value: this.clampInfinite
+        },
+        "!": {
+            match: /!(?:i|\d+)?/u,
+            value: this.clampInfinite
+        },
+        r: {
+            match: /r(?:i|\d+)?/u,
+            value: this.clampInfinite
+        },
+        u: /u/u,
+        narrative: {
+            match: /^(?:\d*(?:[GgYyBbRrPpSsWw]|[AaPpCcBbSsFf]|pro|boo|blk|k|sb|diff))(?: ?\d*(?:[GgYyBbRrPpSsWw]|[AaPpDdCcBbSsFf]|pro|boo|blk|k|sb|diff))+$/u,
+            value: (match) => {
+                const isAbbr = /[AaCcDd]/.test(match);
+                return match
+                    .toLowerCase()
+                    .replace(/pro/g, "y")
+                    .replace(/diff/g, "p")
+                    .replace(/(blk|k|sb)/g, "s")
+                    .replace(/boo/g, "b")
+                    .replace(/p/g, isAbbr ? "y" : "p")
+                    .replace(/a/g, "g")
+                    .replace(/d/g, "p")
+                    .replace(/c/g, "r")
+                    .replace(/f/g, "w")
+                    .replace(/ /g, "")
+                    .replace(/(\d+)(\w)/g, (_, num: string, char: string) =>
+                        char.repeat(Number(num))
+                    )
+            }
+        },
+        stunt: /1[Dd]S/u,
+        "%": /\d+[Dd]\d+%/u,
+        fudge: {
+            match: /(?:\d*[Dd])?[Dd]?F/u,
+            value: (match) => {
+                const { roll = this.defaultRoll } = match.match(
+                    /(?:(?<roll>\d*)[Dd])?F/
+                ).groups;
+                return `${roll}dF`;
+            }
+        },
+        dice: [
+            {
+                match: OMITTED_REGEX,
+                value: (match) => {
+                    const {
+                        roll = this.defaultRoll,
+                        faces = this.defaultFace
+                    } = match.match(
+                        /(?<roll>\d+)?[Dd](?<faces>%|-?\d+|\[\d+(?:[ \t]*[,-][ \t]*\d+)+\])?/
+                    ).groups;
+                    return `${roll}d${faces}`;
+                }
+            },
+            { match: /\d+/u },
+            {
+                match: /\b[A-Za-z][A-Za-z0-9_]+\b/u,
+                value: (match) => {
+                    return (
+                        DataviewManager.getFieldValueFromActiveFile(match) ??
+                        match
+                    );
+                }
+            }
+        ],
+        sort: [
+            {
+                match: /s(?:a|d)*/u,
+                value: (str) => (str == "s" || str == "sa" ? "sa" : "sd")
+            }
+        ],
+        math: MATH_REGEX
+    });
 
     parser: Parser;
     inline: Map<string, number> = new Map();
     defaultFace: number;
     defaultRoll: number;
-    isChainRollerEnabled: boolean = false;;
-
-    #buildRules() {
-        let rules: Record<string, any> = {
-            WS: [{ match: /[ \t]+/u }, { match: /[{}]+/u }],
-            table: TABLE_REGEX,
-            line: LINE_REGEX,
-            section: SECTION_REGEX,
-            tag: TAG_REGEX,
-            dataview: DATAVIEW_REGEX,
-    
-            condition: CONDITIONAL_REGEX,
-    
-            kl: { match: /kl\d*/u, value: this.clampInfinite },
-            kh: [
-                { match: /kh\d*/u, value: this.clampInfinite },
-                { match: /k\d*/u, value: this.clampInfinite }
-            ],
-            dh: { match: /dh\d*/u, value: this.clampInfinite },
-            dl: [{ match: /dl\d*/u, value: this.clampInfinite }],
-            "!!": {
-                match: /!!(?:i|\d+)?/u,
-                value: this.clampInfinite
-            },
-            "!": {
-                match: /!(?:i|\d+)?/u,
-                value: this.clampInfinite
-            },
-            r: {
-                match: /r(?:i|\d+)?/u,
-                value: this.clampInfinite
-            },
-            u: /u/u,
-            narrative: {
-                match: /^(?:\d*(?:[GgYyBbRrPpSsWw]|[AaPpCcBbSsFf]|pro|boo|blk|k|sb|diff))(?: ?\d*(?:[GgYyBbRrPpSsWw]|[AaPpDdCcBbSsFf]|pro|boo|blk|k|sb|diff))+$/u,
-                value: (match: string) => {
-                    const isAbbr = /[AaCcDd]/.test(match);
-                    return match
-                        .toLowerCase()
-                        .replace(/pro/g, "y")
-                        .replace(/diff/g, "p")
-                        .replace(/(blk|k|sb)/g, "s")
-                        .replace(/boo/g, "b")
-                        .replace(/p/g, isAbbr ? "y" : "p")
-                        .replace(/a/g, "g")
-                        .replace(/d/g, "p")
-                        .replace(/c/g, "r")
-                        .replace(/f/g, "w")
-                        .replace(/ /g, "")
-                        .replace(/(\d+)(\w)/g, (_, num: string, char: string) =>
-                            char.repeat(Number(num))
-                        )
-                }
-            },
-            stunt: /1[Dd]S/u,
-            "%": /\d+[Dd]\d+%/u,
-            fudge: {
-                match: /(?:\d*[Dd])?[Dd]?F/u,
-                value: (match: string) => {
-                    const { roll = this.defaultRoll } = match.match(
-                        /(?:(?<roll>\d*)[Dd])?F/
-                    ).groups;
-                    return `${roll}dF`;
-                }
-            },
-            dice: [
-                {
-                    match: OMITTED_REGEX,
-                    value: (match: string) => {
-                        const {
-                            roll = this.defaultRoll,
-                            faces = this.defaultFace
-                        } = match.match(
-                            /(?<roll>\d+)?[Dd](?<faces>%|-?\d+|\[\d+(?:[ \t]*[,-][ \t]*\d+)+\])?/
-                        ).groups;
-                        return `${roll}d${faces}`;
-                    }
-                },
-                { match: /\d+/u },
-                {
-                    match: /\b[A-Za-z][A-Za-z0-9_]+\b/u,
-                    value: (match: string) => {
-                        return (
-                            DataviewManager.getFieldValueFromActiveFile(match) ??
-                            match
-                        );
-                    }
-                }
-            ],
-            sort: [
-                {
-                    match: /s(?:a|d)*/u,
-                    value: (str: string) => (str == "s" || str == "sa" ? "sa" : "sd")
-                }
-            ],
-            math: MATH_REGEX,
-        };
-        if (this.isChainRollerEnabled) {
-            rules.chainedRollDelimiter = {
-                match: CHAINED_ROLL_REGEX,
-                value: CHAINED_ROLL_DELIMITER
-            };
-            rules.resultSeparator = {
-                match: RESULT_SEPARATOR_REGEX,
-                value: (match: string) => {
-                    return match
-                        .replace(new RegExp(`${RESULT_SEPARATOR_INDICATOR}`, "g"), "")
-                        .replace(/"/g, "");
-                }
-            };
-        }
-        let newLexer = moo.compile(rules);
-        this.lexer = newLexer;
-    }
+    isChainRollerEnabled: boolean = false;
 
     clampInfinite(match: string) {
         if (/i$/.test(match)) return "100";
@@ -289,13 +268,79 @@ class LexerClass {
     }
     public setEnableChainRoller(enabled: boolean) {
         this.isChainRollerEnabled = enabled;
-        this.#buildRules();
+    }
+    private parseChainedRolls(input: string): Result<LexicalToken[], string> {
+        try {
+            const isTopLevel = (str: string) => {
+                let parenStack = [];
+                for (let char of str) {
+                    if (char === "(") {
+                        parenStack.push(char);
+                    }
+                    else if (char === ")") {
+                        if (parenStack.length === 0) return false;
+                        parenStack.pop();
+                    }
+                }
+                return parenStack.length === 0;
+            }
+
+            const segments = input.split(CHAINED_ROLL_DELIMITER);
+            for (let segment of segments) {
+                if (!isTopLevel(segment)) {
+                    return Err(`Mismatched parentheses in chained roll input: ${input}`);
+                }
+            }
+
+            const tokens: LexicalToken[] = [];
+            let resultSeparator: string | null = null;
+
+            const lastSegment = segments[segments.length - 1].trim();
+            const resultSeparatorMatch = lastSegment.match(RESULT_SEPARATOR_REGEX);
+            if (resultSeparatorMatch) {
+                resultSeparator = resultSeparatorMatch[0]
+                    .replace(new RegExp(`${RESULT_SEPARATOR_INDICATOR}\\s*`, "g"), "")
+                    .replace(/"/g, "")
+                    .trim();
+                segments.pop();
+            }
+
+            for (let i = 0; i < segments.length; i++) {
+                const segment = segments[i].trim();
+                if (segment.length > 0) {
+                    tokens.push({
+                        type: LEXEME_TYPE_CHAINED_ROLL,
+                        value: segment
+                    } as LexicalToken);
+                }
+            }
+
+            if (resultSeparator) {
+                tokens.push({
+                    type: LEXEME_TYPE_RESULT_SEPARATOR,
+                    value: resultSeparator
+                } as LexicalToken);
+            }
+
+            return Ok(tokens);
+        } catch (e: any) {
+            console.error(e);
+            return Err(e.message);
+        }
     }
     parse(input: string): Result<LexicalToken[], string> {
         try {
-            const tokens = Array.from(this.lexer.reset(input));
-            this.lexer.reset();
-            return Ok(this.parser.parse(this.transform(tokens)));
+            if (this.isChainRollerEnabled && input.includes(CHAINED_ROLL_DELIMITER)) {
+                let result = this.parseChainedRolls(input);
+                if (result.isErr()) {
+                    throw result;
+                }
+                return result;
+            } else {
+                const tokens = Array.from(this.lexer.reset(input));
+                this.lexer.reset();
+                return Ok(this.parser.parse(this.transform(tokens)));
+            }
         } catch (e: any) {
             console.error(e);
             return Err("Could not parse");
