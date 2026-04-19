@@ -549,7 +549,10 @@ test('Lexer should parse "6dF"', () => {
 
 // ALIASED ROLLS ==============================================================
 
-test('Lexer should parse "1d6 @\"alias\""', () => {
+test('Lexer should parse "1d6 @\"alias\" when roll aliasing is enabled"', () => {
+    let _prev = Lexer.isRollAliasingEnabled;
+    Lexer.setEnableRollAliasing(true);
+
     let actual = Lexer.parse("1d6 @\"alias\"").unwrap().map(toLexicalToken);
     expect(actual).toEqual([
         {
@@ -565,19 +568,21 @@ test('Lexer should parse "1d6 @\"alias\""', () => {
             value: "alias"
         }
     ]);
+
+    Lexer.setEnableRollAliasing(_prev);
+});
+
+test('Lexer should not parse "1d6 @\"alias\" when roll aliasing is disabled"', () => {
+    let _prev = Lexer.isRollAliasingEnabled;
+    Lexer.setEnableRollAliasing(false);
+
+    let actual = Lexer.parse("1d6 @\"alias\"").unwrapErr();
+    expect(actual).toEqual("Could not parse");
+
+    Lexer.setEnableRollAliasing(_prev);
 });
 
 // CHAINED ROLLS ==============================================================
-
-test('Lexer should not parse "1d6; 1d4 * (1d2 - 1); ~\"|\" @\"alias\"" when ChainRoller is disabled', () => {
-    let _prev = Lexer.isChainRollerEnabled;
-    Lexer.setEnableChainRoller(false);
-
-    let actual = Lexer.parse("1d6; 1d4 * (1d2 - 1); ~\"|\" @\"alias\"").unwrapErr();
-    expect(actual).toEqual("Could not parse");
-
-    Lexer.setEnableChainRoller(_prev);
-});
 
 test('Lexer should parse "1d6; 1d4 * (1d2 - 1); ~\"|\" @\"alias\"" when ChainRoller is enabled', () => {
     let _prev = Lexer.isChainRollerEnabled;
@@ -610,6 +615,16 @@ test('Lexer should parse "1d6; 1d4 * (1d2 - 1); ~\"|\" @\"alias\"" when ChainRol
             value: "alias"
         }
     ]);
+
+    Lexer.setEnableChainRoller(_prev);
+});
+
+test('Lexer should not parse "1d6; 1d4 * (1d2 - 1); ~\"|\" @\"alias\"" when ChainRoller is disabled', () => {
+    let _prev = Lexer.isChainRollerEnabled;
+    Lexer.setEnableChainRoller(false);
+
+    let actual = Lexer.parse("1d6; 1d4 * (1d2 - 1); ~\"|\" @\"alias\"").unwrapErr();
+    expect(actual).toEqual("Could not parse");
 
     Lexer.setEnableChainRoller(_prev);
 });
