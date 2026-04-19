@@ -103,9 +103,11 @@ export default class SavedFormulasView extends ItemView {
                 });
         }
 
-        // add clear all button at bottom mirroring settings behavior
+        // add divider then clear all button at bottom mirroring settings behavior
+        const divider = this.contentEl.createDiv("saved-formulas-divider");
         const footer = this.contentEl.createDiv("saved-formulas-footer");
         const clearBtnWrap = footer.createDiv("clear-saved-formulas");
+            const clearLabel = clearBtnWrap.createSpan({ cls: "clear-saved-formulas-label", text: "Clear All Saved Formulas" });
         new ExtraButtonComponent(clearBtnWrap)
             .setIcon(Icons.DELETE)
             .setTooltip("Clear Saved Formulas")
@@ -120,7 +122,6 @@ export default class SavedFormulasView extends ItemView {
                 }
 
                 if (b) (b as any)[key] = true;
-                // show warning state on the button if possible
                 try {
                     if (b) b.setIcon(Icons.WARNING).setTooltip(`Click again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
                 } catch (e) {}

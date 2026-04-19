@@ -4,14 +4,12 @@
     gap: 0.5rem;
 }
 
-.dice-saved-formulas-view .saved-formula-row {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0.35rem 0.5rem;
-    border-radius: 4px;
+/* Divider element separating the list from footer */
+.dice-saved-formulas-view .saved-formulas-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--background-modifier-border, rgba(0, 0, 0, 0.08));
+    margin: 0 0 0.5rem 0;
 }
 
 .dice-saved-formulas-view .saved-formula-label {
