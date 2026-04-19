@@ -48,6 +48,8 @@ export default class SettingTab extends PluginSettingTab {
     iconsEl: HTMLDivElement;
     contentEl: HTMLDivElement;
     pathsEl: HTMLDivElement;
+    readonly #CONFIRM_TIMEOUT_SECONDS = 3;
+    readonly #CONFIRM_TIMEOUT_MILLISECONDS = this.#CONFIRM_TIMEOUT_SECONDS * 1000;
 
     constructor(app: App, public plugin: DiceRoller) {
         super(app, plugin);
@@ -370,8 +372,6 @@ export default class SettingTab extends PluginSettingTab {
             .setName("Reset Chained Rolls Settings (CAUTION)")
             .setDesc("Reset chained rolls settings to defaults. WARNING: This is a destructive action.")
             .addExtraButton((b: ExtraButtonComponent) => {
-                const CONFIRM_TIMEOUT_SECONDS = 3;
-                const CONFIRM_TIMEOUT_MILLISECONDS = CONFIRM_TIMEOUT_SECONDS * 1000;
                 b.setIcon(Icons.RESET)
                     .setTooltip("Reset Chained Rolls Settings to Defaults")
                     .onClick(async () => {
@@ -387,14 +387,14 @@ export default class SettingTab extends PluginSettingTab {
 
                         // first click: warn and set confirmation window
                         (b as any)[key] = true;
-                        b.setIcon(Icons.WARNING).setTooltip(`Click again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
-                        new Notice(`This is a destructive action. Click the reset button again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
+                        b.setIcon(Icons.WARNING).setTooltip(`Click again within ${this.#CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
+                        new Notice(`This is a destructive action. Click the reset button again within ${this.#CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
                         setTimeout(() => {
                             (b as any)[key] = false;
                             try {
                                 b.setIcon(Icons.RESET).setTooltip("Reset to Default");
                             } catch (e) {}
-                        }, CONFIRM_TIMEOUT_MILLISECONDS);
+                        }, this.#CONFIRM_TIMEOUT_MILLISECONDS);
                     });
             });
 
@@ -866,6 +866,34 @@ export default class SettingTab extends PluginSettingTab {
         const settingEl = containerEl.createDiv(
             "dice-roller-setting-additional-container"
         );
+
+        new Setting(settingEl)
+            .setName("Clear Saved Formulas (CAUTION)")
+            .setDesc("Clear all saved formulas. WARNING: This is a destructive action.")
+            .addExtraButton((b: ExtraButtonComponent) => {
+                b.setIcon(Icons.RESET)
+                    .setTooltip("Clear Saved Formulas")
+                    .onClick(async () => {
+                        const key = "__formulas_reset_confirm";
+                        if ((b as any)[key]) {
+                            this.plugin.data.formulas = {};
+                            await this.plugin.saveSettings();
+                            new Notice("Saved formulas cleared.");
+                            this.buildFormulaSettings(containerEl);
+                            return;
+                        }
+
+                        (b as any)[key] = true;
+                        b.setIcon(Icons.WARNING).setTooltip(`Click again within ${this.#CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
+                        new Notice(`This is a destructive action. Click the reset button again within ${this.#CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
+                        setTimeout(() => {
+                            (b as any)[key] = false;
+                            try {
+                                b.setIcon(Icons.RESET).setTooltip("Reset to Default");
+                            } catch (e) {}
+                        }, this.#CONFIRM_TIMEOUT_MILLISECONDS);
+                    });
+            });
 
         const addNew = settingEl.createDiv();
         new Setting(addNew)
