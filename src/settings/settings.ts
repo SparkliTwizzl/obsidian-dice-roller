@@ -907,34 +907,48 @@ export default class SettingTab extends PluginSettingTab {
             const setting = new Setting(additional).setName(alias);
             setting.controlEl.createSpan({ text: formula });
             setting
-                .addExtraButton((b) =>
-                    b
-                        .setIcon(Icons.EDIT)
-                        .setTooltip("Edit")
-                        .onClick(async () => {
-                            const edited = await this.buildFormulaForm(sidebarView, {
-                                alias,
-                                formula
-                            });
+                .addExtraButton((b) => b
+                    .setIcon(Icons.EDIT)
+                    .setTooltip("Edit")
+                    .onClick(async () => {
+                        const edited = await this.buildFormulaForm(sidebarView, {
+                            alias,
+                            formula
+                        });
 
-                            if (edited) {
-                                delete this.plugin.data.formulas[alias];
-                                this.plugin.data.formulas[edited.alias] =
-                                    edited.formula;
-                                this.buildSavedFormulas(containerEl);
-                                await this.plugin.saveSettings();
-                            }
-                        })
-                )
-                .addExtraButton((b) =>
-                    b
-                        .setIcon(Icons.DELETE)
-                        .setTooltip("Delete")
-                        .onClick(async () => {
+                        if (edited) {
                             delete this.plugin.data.formulas[alias];
-                            await this.plugin.saveSettings();
+                            this.plugin.data.formulas[edited.alias] =
+                                edited.formula;
                             this.buildSavedFormulas(containerEl);
-                        })
+                            await this.plugin.saveSettings();
+                        }
+                    })
+                )
+                .addExtraButton((b) => b
+                    .setIcon(Icons.COPY)
+                    .setTooltip("Copy")
+                    .onClick(async () => {
+                        let newAlias = `${alias} - Copy`;
+                        const formulas = this.plugin.data.formulas ?? {};
+                        let counter = 1;
+                        while (formulas[newAlias]) {
+                            newAlias = `${alias} - Copy (${counter++})`;
+                        }
+                        this.plugin.data.formulas[newAlias] = formula;
+                        await this.plugin.saveSettings();
+                        new Notice(`Copied formula to '${newAlias}'.`);
+                        this.buildSavedFormulas(containerEl);
+                    })
+                )
+                .addExtraButton((b) => b
+                    .setIcon(Icons.DELETE)
+                    .setTooltip("Delete")
+                    .onClick(async () => {
+                        delete this.plugin.data.formulas[alias];
+                        await this.plugin.saveSettings();
+                        this.buildSavedFormulas(containerEl);
+                    })
                 );
         }
         if (!Object.values(formulas).length) {

@@ -97,6 +97,22 @@ export default class SavedFormulasView extends ItemView {
                 });
 
             new ExtraButtonComponent(actions)
+                .setIcon(Icons.COPY)
+                .setTooltip("Copy")
+                .onClick(async () => {
+                    let newAlias = `${alias} - Copy`;
+                    const formulas = this.plugin.data.formulas ?? {};
+                    let counter = 1;
+                    while (formulas[newAlias]) {
+                        newAlias = `${alias} - Copy (${counter++})`;
+                    }
+                    this.plugin.data.formulas[newAlias] = formula;
+                    await this.plugin.saveSettings();
+                    new Notice(`Copied formula to '${newAlias}'.`);
+                    this.render();
+                });
+
+            new ExtraButtonComponent(actions)
                 .setIcon(Icons.DELETE)
                 .setTooltip("Delete")
                 .onClick(async () => {
