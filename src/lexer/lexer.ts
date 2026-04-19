@@ -268,7 +268,7 @@ class LexerClass {
     public setEnableChainRoller(enabled: boolean) {
         this.isChainRollerEnabled = enabled;
     }
-    private parseChainedRolls(input: string): Result<LexicalToken[], string> {
+    #parseChainedRolls(input: string): Result<LexicalToken[], string> {
         try {
             const isTopLevel = (str: string) => {
                 let parenStack = [];
@@ -330,7 +330,7 @@ class LexerClass {
     parse(input: string): Result<LexicalToken[], string> {
         try {
             if (this.isChainRollerEnabled && input.includes(CHAINED_ROLL_DELIMITER)) {
-                let result = this.parseChainedRolls(input);
+                let result = this.#parseChainedRolls(input);
                 if (result.isErr()) {
                     throw result;
                 }
