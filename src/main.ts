@@ -5,7 +5,7 @@ import { StackRoller } from "./rollers/dice/stack";
 import SettingTab from "./settings/settings";
 
 import DiceTrayView, { VIEW_TYPE_DICE_TRAY } from "./views/dice-tray";
-import SavedFormulasView, { VIEW_TYPE_SAVED_FORMULAS } from "./views/saved-formulas";
+import SavedFormulasView, { VIEW_TYPE_SAVED_DICE_FORMULAS } from "./views/saved-dice-formulas";
 import { DiceRenderer, type RendererData } from "./renderer/renderer";
 import { Lexer } from "./lexer/lexer";
 import { inlinePlugin } from "./processor/live-preview";
@@ -59,7 +59,7 @@ export default class DiceRollerPlugin extends Plugin {
         );
 
         this.registerView(
-            VIEW_TYPE_SAVED_FORMULAS,
+            VIEW_TYPE_SAVED_DICE_FORMULAS,
             (leaf: WorkspaceLeaf) => new SavedFormulasView(this, leaf)
         );
 
@@ -105,8 +105,8 @@ export default class DiceRollerPlugin extends Plugin {
         });
 
         this.addCommand({
-            id: "open-saved-formulas-tab",
-            name: "Open Saved Formulas Tab",
+            id: "open-saved-dice-formulas-tab",
+            name: "Open Saved Dice Formulas Tab",
             callback: async () => {
                 if (!this.savedFormulasView) {
                     this.addSavedFormulasView();
@@ -140,7 +140,7 @@ export default class DiceRollerPlugin extends Plugin {
     }
 
     get savedFormulasView() {
-        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_SAVED_FORMULAS);
+        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_SAVED_DICE_FORMULAS);
         const leaf = leaves.length ? leaves[0] : null;
         if (leaf && leaf.view && leaf.view instanceof SavedFormulasView)
             return leaf.view;
@@ -158,11 +158,11 @@ export default class DiceRollerPlugin extends Plugin {
 
     async addSavedFormulasView(startup = false) {
         if (startup && !this.data.showSavedFormulasViewOnStartup) return;
-        if (this.app.workspace.getLeavesOfType(VIEW_TYPE_SAVED_FORMULAS).length) {
+        if (this.app.workspace.getLeavesOfType(VIEW_TYPE_SAVED_DICE_FORMULAS).length) {
             return;
         }
         await this.app.workspace.getRightLeaf(false).setViewState({
-            type: VIEW_TYPE_SAVED_FORMULAS
+            type: VIEW_TYPE_SAVED_DICE_FORMULAS
         });
     }
 

@@ -864,11 +864,11 @@ export default class SettingTab extends PluginSettingTab {
         containerEl.empty();
         this.#buildSummary(containerEl, "Saved Formulas");
 
-        const sidebarView = containerEl.createDiv("saved-formulas-view");
+        const sidebarView = containerEl.createDiv("saved-dice-formulas-view");
         new Setting(sidebarView)
-            .setName("Open Saved Formulas Tab on Startup")
+            .setName("Open Saved Dice Formulas Tab on Startup")
             .setDesc(
-                "The saved formulas tab can always be opened using the command from the command palette."
+                "The saved dice formulas tab can always be opened using the command from the command palette."
             )
             .addToggle((t) => {
                 t.setValue(this.plugin.data.showSavedFormulasViewOnStartup);
