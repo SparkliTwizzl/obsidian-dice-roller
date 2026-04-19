@@ -136,6 +136,7 @@ class APIInstance implements APIInterface {
         this.data = data;
         this.app = app;
         Lexer.setEnableChainRoller(this.data?.enableChainRoller);
+        Lexer.setEnableRollAliasing(this.data?.enableRollAliasing);
     }
 
     #getChainRoller(raw: string, source: string, options: RollerOptions) {
