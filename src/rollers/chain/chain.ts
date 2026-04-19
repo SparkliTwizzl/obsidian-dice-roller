@@ -9,6 +9,8 @@ export class ChainRoller extends BasicRoller {
     subRollers: BasicRoller[] = [];
     app: App;
 
+    private _resultSeparator?: string;
+
     private async executeRoll() {
         let subResults = [];
         for (let i = 0; i < this.subRollers.length; ++i) {
@@ -43,7 +45,7 @@ export class ChainRoller extends BasicRoller {
             .replace(/\r/g, "\\r")
             .replace(/\n/g, "\\n");
 
-        const rawSeparator = (this.data && (this.data as any).chainedResultSeparator) ?? RESULT_SEPARATOR;
+        const rawSeparator = this._resultSeparator ?? RESULT_SEPARATOR;
         const decodedSeparator = decodeEscapedControlChars(rawSeparator);
         const displayJoiner = decodedSeparator.endsWith("\n") ? decodedSeparator.trimEnd() : decodedSeparator;
 
@@ -70,6 +72,7 @@ export class ChainRoller extends BasicRoller {
         subRollers: BasicRoller[],
         app: App,
         position = data.position,
+        resultSeparator?: string,
         alias?: string | null,
         showFormula?: boolean,
         displayFormulaAfter?: boolean,
@@ -77,6 +80,8 @@ export class ChainRoller extends BasicRoller {
         super(data, original, [] as any, position, alias);
         this.subRollers = subRollers;
         this.app = app;
+        this._resultSeparator = resultSeparator;
+        
         if (typeof showFormula === "boolean") {
             this.showFormula = showFormula;
         }
