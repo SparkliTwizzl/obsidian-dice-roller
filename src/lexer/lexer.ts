@@ -299,8 +299,7 @@ class LexerClass {
             if (resultSeparatorMatch) {
                 resultSeparator = resultSeparatorMatch[0]
                     .replace(new RegExp(`${RESULT_SEPARATOR_INDICATOR}\\s*`, "g"), "")
-                    .replace(/"/g, "")
-                    .trim();
+                    .replace(/"/g, "");
                 segments.pop();
             }
 
