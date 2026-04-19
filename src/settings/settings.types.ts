@@ -32,7 +32,8 @@ export interface DiceRollerSettings {
     diceColor: string;
     textColor: string;
     textFont: string;
-    showLeafOnStartup: boolean;
+    showDiceTrayViewOnStartup: boolean;
+    showSavedFormulasViewOnStartup: boolean;
     narrativeSymbolSet: string;
     displayAsSymbols: boolean;
     customFormulas: string[];

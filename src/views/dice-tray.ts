@@ -19,7 +19,7 @@ import type { RenderableRoller } from "src/rollers/roller";
 
 /* import { Details } from "@javalent/utilities"; */
 
-export const VIEW_TYPE = "DICE_ROLLER_VIEW";
+export const VIEW_TYPE_DICE_TRAY = "DICE_ROLLER_VIEW";
 
 export interface ViewResult {
     original: string;
@@ -64,7 +64,7 @@ export default class DiceTrayView extends ItemView {
                 async (roller: RenderableRoller) => {
                     if (
                         this.plugin.data.addToView ||
-                        roller.getSource() == VIEW_TYPE
+                        roller.getSource() == VIEW_TYPE_DICE_TRAY
                     ) {
                         await this.addResult({
                             result: roller.getResultText(),
@@ -208,7 +208,7 @@ export default class DiceTrayView extends ItemView {
             const diceFormula = /^(?:1)?d(\d|%|F)+$/.test(icon.formula)
                 ? `${Math.abs(amount)}${icon.formula.replace(/^1/, "")}`
                 : `${Math.abs(amount)} * (${icon.formula})`;
-            const roller = API.getRoller(icon.formula, VIEW_TYPE);
+            const roller = API.getRoller(icon.formula, VIEW_TYPE_DICE_TRAY);
             if (roller == null) continue;
             if (!(roller instanceof StackRoller)) continue;
             roller.buildDiceTree();
@@ -258,7 +258,7 @@ export default class DiceTrayView extends ItemView {
             opts.expectedValue = ExpectedValue.Roll;
         }
         try {
-            const roller = await API.getRoller(formula, VIEW_TYPE, opts);
+            const roller = await API.getRoller(formula, VIEW_TYPE_DICE_TRAY, opts);
             if (roller == null) return;
             if (!(roller instanceof StackRoller)) {
                 throw new Error("The Dice Tray only supports dice rolls.");
@@ -395,7 +395,7 @@ export default class DiceTrayView extends ItemView {
         return "Dice Tray";
     }
     getViewType() {
-        return VIEW_TYPE;
+        return VIEW_TYPE_DICE_TRAY;
     }
     getIcon() {
         return Icons.DICE;

@@ -124,7 +124,7 @@ export default class SettingTab extends PluginSettingTab {
                 cls: "dice-roller-nested-settings"
             })
         );
-        this.buildFormulaSettings(
+        this.buildSavedFormulas(
             this.contentEl.createEl("details", {
                 cls: "dice-roller-nested-settings"
             })
@@ -539,9 +539,9 @@ export default class SettingTab extends PluginSettingTab {
                 "The dice tray can always be opened using the command from the command palette."
             )
             .addToggle((t) => {
-                t.setValue(this.plugin.data.showLeafOnStartup);
+                t.setValue(this.plugin.data.showDiceTrayViewOnStartup);
                 t.onChange(async (v) => {
-                    this.plugin.data.showLeafOnStartup = v;
+                    this.plugin.data.showDiceTrayViewOnStartup = v;
                     await this.plugin.saveSettings();
                 });
             });
@@ -603,7 +603,7 @@ export default class SettingTab extends PluginSettingTab {
                 if (!toAdd.text || !toAdd.formula) return;
                 this.plugin.data.icons.push({ ...toAdd });
                 this.buildIcons();
-                await this.plugin.view.buildButtons();
+                await this.plugin.diceTrayView.buildButtons();
                 await this.plugin.saveSettings();
             });
         const drop = new DropdownComponent(dropEl);
@@ -637,7 +637,7 @@ export default class SettingTab extends PluginSettingTab {
             .setIcon(Icons.DELETE)
             .onClick(async () => {
                 this.plugin.data.icons.splice(index, 1);
-                await this.plugin.view.buildButtons();
+                await this.plugin.diceTrayView.buildButtons();
                 this.buildIcons();
             });
     }
@@ -681,7 +681,7 @@ export default class SettingTab extends PluginSettingTab {
                 this.plugin.data.icons.splice(index, 1, { ...toAdd });
                 await this.plugin.saveSettings();
                 this.buildStaticIcon(rowEl, index);
-                await this.plugin.view.buildButtons();
+                await this.plugin.diceTrayView.buildButtons();
             });
         new ExtraButtonComponent(actionsEl)
             .setIcon(Icons.CANCEL)
@@ -860,13 +860,25 @@ export default class SettingTab extends PluginSettingTab {
             });
     }
 
-    buildFormulaSettings(containerEl: HTMLDetailsElement) {
+    buildSavedFormulas(containerEl: HTMLDetailsElement) {
         containerEl.empty();
         this.#buildSummary(containerEl, "Saved Formulas");
-        const settingEl = containerEl.createDiv(
-            "dice-roller-setting-additional-container"
-        );
 
+        const sidebarView = containerEl.createDiv("saved-formulas-view");
+        new Setting(sidebarView)
+            .setName("Open Saved Formulas Tab on Startup")
+            .setDesc(
+                "The saved formulas tab can always be opened using the command from the command palette."
+            )
+            .addToggle((t) => {
+                t.setValue(this.plugin.data.showSavedFormulasViewOnStartup);
+                t.onChange(async (v) => {
+                    this.plugin.data.showSavedFormulasViewOnStartup = v;
+                    await this.plugin.saveSettings();
+                });
+            });
+
+        const settingEl = containerEl.createDiv("dice-roller-setting-additional-container");
         const addNew = settingEl.createDiv();
         new Setting(addNew)
             .setName("Add Formula")
@@ -876,12 +888,12 @@ export default class SettingTab extends PluginSettingTab {
                     .setTooltip("Add Formula")
                     .setButtonText("+")
                     .onClick(async () => {
-                        const formula = await this.buildFormulaForm(addNew);
+                        const formula = await this.buildFormulaForm(sidebarView);
 
                         if (formula) {
                             this.plugin.data.formulas[formula.alias] =
                                 formula.formula;
-                            this.buildFormulaSettings(containerEl);
+                            this.buildSavedFormulas(containerEl);
                             await this.plugin.saveSettings();
                         }
                     });
@@ -902,7 +914,7 @@ export default class SettingTab extends PluginSettingTab {
                         .setIcon(Icons.EDIT)
                         .setTooltip("Edit")
                         .onClick(async () => {
-                            const edited = await this.buildFormulaForm(addNew, {
+                            const edited = await this.buildFormulaForm(sidebarView, {
                                 alias,
                                 formula
                             });
@@ -911,7 +923,7 @@ export default class SettingTab extends PluginSettingTab {
                                 delete this.plugin.data.formulas[alias];
                                 this.plugin.data.formulas[edited.alias] =
                                     edited.formula;
-                                this.buildFormulaSettings(containerEl);
+                                this.buildSavedFormulas(containerEl);
                                 await this.plugin.saveSettings();
                             }
                         })
@@ -923,7 +935,7 @@ export default class SettingTab extends PluginSettingTab {
                         .onClick(async () => {
                             delete this.plugin.data.formulas[alias];
                             await this.plugin.saveSettings();
-                            this.buildFormulaSettings(containerEl);
+                            this.buildSavedFormulas(containerEl);
                         })
                 );
         }
@@ -934,7 +946,8 @@ export default class SettingTab extends PluginSettingTab {
             });
         }
 
-        new Setting(settingEl)
+        const clearSavedEl = containerEl.createDiv("clear-saved-formulas");
+        new Setting(clearSavedEl)
             .setName("Clear Saved Formulas (CAUTION)")
             .setDesc("Clear all saved formulas. WARNING: This is a destructive action.")
             .addExtraButton((b: ExtraButtonComponent) => {
@@ -946,7 +959,7 @@ export default class SettingTab extends PluginSettingTab {
                             this.plugin.data.formulas = {};
                             await this.plugin.saveSettings();
                             new Notice("Saved formulas cleared.");
-                            this.buildFormulaSettings(containerEl);
+                            this.buildSavedFormulas(containerEl);
                             return;
                         }
 

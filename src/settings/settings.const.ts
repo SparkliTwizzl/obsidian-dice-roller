@@ -28,7 +28,8 @@ export const DEFAULT_SETTINGS: DiceRollerSettings = {
     diceColor: "#202020",
     textColor: "#ffffff",
     textFont: "Arial",
-    showLeafOnStartup: true,
+    showDiceTrayViewOnStartup: true,
+    showSavedFormulasViewOnStartup: true,
     narrativeSymbolSet: "Genesys",
     displayAsSymbols: false,
     

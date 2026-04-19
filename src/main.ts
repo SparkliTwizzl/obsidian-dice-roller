@@ -4,10 +4,10 @@ import { StackRoller } from "./rollers/dice/stack";
 
 import SettingTab from "./settings/settings";
 
-import DiceTrayView, { VIEW_TYPE } from "./views/dice-tray";
+import DiceTrayView, { VIEW_TYPE_DICE_TRAY } from "./views/dice-tray";
+import SavedFormulasView, { VIEW_TYPE_SAVED_FORMULAS } from "./views/saved-formulas";
 import { DiceRenderer, type RendererData } from "./renderer/renderer";
 import { Lexer } from "./lexer/lexer";
-import { type RollerOptions } from "./api/api";
 import { inlinePlugin } from "./processor/live-preview";
 import { API } from "./api/api";
 import {
@@ -54,8 +54,13 @@ export default class DiceRollerPlugin extends Plugin {
         this.addSettingTab(new SettingTab(this.app, this));
 
         this.registerView(
-            VIEW_TYPE,
+            VIEW_TYPE_DICE_TRAY,
             (leaf: WorkspaceLeaf) => new DiceTrayView(this, leaf)
+        );
+
+        this.registerView(
+            VIEW_TYPE_SAVED_FORMULAS,
+            (leaf: WorkspaceLeaf) => new SavedFormulasView(this, leaf)
         );
 
         this.registerEvent(
@@ -91,10 +96,22 @@ export default class DiceRollerPlugin extends Plugin {
             id: "open-view",
             name: "Open Dice Tray",
             callback: () => {
-                if (!this.view) {
+                if (!this.diceTrayView) {
                     this.addDiceTrayView();
                 } else {
-                    this.app.workspace.revealLeaf(this.view.leaf);
+                    this.app.workspace.revealLeaf(this.diceTrayView.leaf);
+                }
+            }
+        });
+
+        this.addCommand({
+            id: "open-saved-formulas-tab",
+            name: "Open Saved Formulas Tab",
+            callback: async () => {
+                if (!this.savedFormulasView) {
+                    this.addSavedFormulasView();
+                } else {
+                    this.app.workspace.revealLeaf(this.savedFormulasView.leaf);
                 }
             }
         });
@@ -109,25 +126,43 @@ export default class DiceRollerPlugin extends Plugin {
 
         this.app.workspace.onLayoutReady(async () => {
             this.addDiceTrayView(true);
+            this.addSavedFormulasView(true);
         });
 
         this.app.workspace.trigger("dice-roller:loaded");
     }
 
-    get view() {
-        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE);
+    get diceTrayView() {
+        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_DICE_TRAY);
         const leaf = leaves.length ? leaves[0] : null;
         if (leaf && leaf.view && leaf.view instanceof DiceTrayView)
             return leaf.view;
     }
 
+    get savedFormulasView() {
+        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_SAVED_FORMULAS);
+        const leaf = leaves.length ? leaves[0] : null;
+        if (leaf && leaf.view && leaf.view instanceof SavedFormulasView)
+            return leaf.view;
+    }
+
     async addDiceTrayView(startup = false) {
-        if (startup && !this.data.showLeafOnStartup) return;
-        if (this.app.workspace.getLeavesOfType(VIEW_TYPE).length) {
+        if (startup && !this.data.showDiceTrayViewOnStartup) return;
+        if (this.app.workspace.getLeavesOfType(VIEW_TYPE_DICE_TRAY).length) {
             return;
         }
         await this.app.workspace.getRightLeaf(false).setViewState({
-            type: VIEW_TYPE
+            type: VIEW_TYPE_DICE_TRAY
+        });
+    }
+
+    async addSavedFormulasView(startup = false) {
+        if (startup && !this.data.showSavedFormulasViewOnStartup) return;
+        if (this.app.workspace.getLeavesOfType(VIEW_TYPE_SAVED_FORMULAS).length) {
+            return;
+        }
+        await this.app.workspace.getRightLeaf(false).setViewState({
+            type: VIEW_TYPE_SAVED_FORMULAS
         });
     }
 
@@ -182,7 +217,7 @@ export default class DiceRollerPlugin extends Plugin {
     onunload() {
         console.log("DiceRoller unloaded");
         this.app.workspace
-            .getLeavesOfType(VIEW_TYPE)
+            .getLeavesOfType(VIEW_TYPE_DICE_TRAY)
             .forEach((leaf) => leaf.detach());
 
         if ("__THREE__" in window) {
