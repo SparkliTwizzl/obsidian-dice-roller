@@ -1,4 +1,5 @@
 @import "./assets/main.css";
 @import "./views/dice-tray.css";
+@import "./views/saved-dice-formulas.css";
 @import "./settings/settings.css";
 @import "./renderer/font.css";
