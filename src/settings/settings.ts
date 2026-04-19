@@ -114,7 +114,7 @@ export default class SettingTab extends PluginSettingTab {
                 cls: "dice-roller-nested-settings"
             })
         );
-        this.buildView(
+        this.buildDiceTray(
             this.contentEl.createEl("details", {
                 cls: "dice-roller-nested-settings"
             })
@@ -529,7 +529,7 @@ export default class SettingTab extends PluginSettingTab {
             });
     }
 
-    buildView(containerEl: HTMLDetailsElement) {
+    buildDiceTray(containerEl: HTMLDetailsElement) {
         containerEl.empty();
         this.#buildSummary(containerEl, "Dice Tray");
 
@@ -867,34 +867,6 @@ export default class SettingTab extends PluginSettingTab {
             "dice-roller-setting-additional-container"
         );
 
-        new Setting(settingEl)
-            .setName("Clear Saved Formulas (CAUTION)")
-            .setDesc("Clear all saved formulas. WARNING: This is a destructive action.")
-            .addExtraButton((b: ExtraButtonComponent) => {
-                b.setIcon(Icons.RESET)
-                    .setTooltip("Clear Saved Formulas")
-                    .onClick(async () => {
-                        const key = "__formulas_reset_confirm";
-                        if ((b as any)[key]) {
-                            this.plugin.data.formulas = {};
-                            await this.plugin.saveSettings();
-                            new Notice("Saved formulas cleared.");
-                            this.buildFormulaSettings(containerEl);
-                            return;
-                        }
-
-                        (b as any)[key] = true;
-                        b.setIcon(Icons.WARNING).setTooltip(`Click again within ${this.#CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
-                        new Notice(`This is a destructive action. Click the reset button again within ${this.#CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
-                        setTimeout(() => {
-                            (b as any)[key] = false;
-                            try {
-                                b.setIcon(Icons.RESET).setTooltip("Reset to Default");
-                            } catch (e) {}
-                        }, this.#CONFIRM_TIMEOUT_MILLISECONDS);
-                    });
-            });
-
         const addNew = settingEl.createDiv();
         new Setting(addNew)
             .setName("Add Formula")
@@ -961,6 +933,34 @@ export default class SettingTab extends PluginSettingTab {
                 cls: "no-formulas"
             });
         }
+
+        new Setting(settingEl)
+            .setName("Clear Saved Formulas (CAUTION)")
+            .setDesc("Clear all saved formulas. WARNING: This is a destructive action.")
+            .addExtraButton((b: ExtraButtonComponent) => {
+                b.setIcon(Icons.DELETE)
+                    .setTooltip("Clear Saved Formulas")
+                    .onClick(async () => {
+                        const key = "__formulas_reset_confirm";
+                        if ((b as any)[key]) {
+                            this.plugin.data.formulas = {};
+                            await this.plugin.saveSettings();
+                            new Notice("Saved formulas cleared.");
+                            this.buildFormulaSettings(containerEl);
+                            return;
+                        }
+
+                        (b as any)[key] = true;
+                        b.setIcon(Icons.WARNING).setTooltip(`Click again within ${this.#CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
+                        new Notice(`This is a destructive action. Click the reset button again within ${this.#CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
+                        setTimeout(() => {
+                            (b as any)[key] = false;
+                            try {
+                                b.setIcon(Icons.DELETE).setTooltip("Clear Saved Formulas");
+                            } catch (e) {}
+                        }, this.#CONFIRM_TIMEOUT_MILLISECONDS);
+                    });
+            });
     }
 
     async buildFormulaForm(
