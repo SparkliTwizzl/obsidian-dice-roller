@@ -13,6 +13,7 @@ import {
     LEXEME_TYPE_LINE,
     LEXEME_TYPE_LINK,
     LEXEME_TYPE_NARRATIVE,
+    LEXEME_TYPE_RESULT_SEPARATOR,
     LEXEME_TYPE_SECTION,
     LEXEME_TYPE_TABLE,
     LEXEME_TYPE_TAG,
@@ -261,17 +262,52 @@ class APIInstance implements APIInterface {
     }
 
     #getChainRoller(raw: string, source: string, options: RollerOptions) {
-        // return not implemented error if chain roller is not enabled
         if (!this.data.enableChainRoller) {
-            throw new Error("Chain roller is not enabled.");
+            console.error("Chain roller is not enabled.");
+            return null;
         }
-        return new ChainRoller(
-            this.data,
-            raw,
-            [],
-            this.app,
-            options.position ?? this.data.position
-        );
+        const topLevelLexemeResult = Lexer.parse(raw);
+        if (topLevelLexemeResult.isErr()) {
+            console.error(topLevelLexemeResult.unwrapErr());
+            return null;
+        }
+        const topLevelLexemes = topLevelLexemeResult.unwrap();
+
+        let resultSeparator: string | undefined = undefined;
+        const finalTopLevelLexeme = topLevelLexemes[topLevelLexemes.length - 1];
+        if (finalTopLevelLexeme.type === LEXEME_TYPE_RESULT_SEPARATOR) {
+            resultSeparator = finalTopLevelLexeme.value;
+            topLevelLexemes.pop();
+        }
+
+        const createSubRoller = (lexeme: LexicalToken) => {
+            if (lexeme.type !== LEXEME_TYPE_CHAINED_ROLL) {
+                console.error(
+                    "Unexpected lexeme type in chain roller input: ",
+                    lexeme
+                );
+                return null;
+            }
+            if (lexeme.value.includes(CHAINED_ROLL_DELIMITER)) {
+                console.error(
+                    "Nested chained rolls are not supported. Invalid lexeme: ",
+                    lexeme
+                );
+                return null;
+            }
+            return this.getRoller(lexeme.value, source, options);
+        }
+
+        let subRollers: BasicRoller[] = [];
+        for (let lexeme of topLevelLexemes) {
+            const roller = createSubRoller(lexeme);
+            if (!roller) {
+                return null;
+            }
+            subRollers.push(roller);
+        }
+
+        return new ChainRoller(this.data, raw, subRollers, this.app, options.position);
     }
 
     getRoller(
