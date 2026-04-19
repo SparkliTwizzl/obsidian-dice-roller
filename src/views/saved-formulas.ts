@@ -22,16 +22,19 @@ export default class SavedFormulasView extends ItemView {
 
         const container = this.contentEl.createDiv("saved-formulas-container");
 
-        if (!this.plugin.data.customFormulas?.length) {
+        const formulas = this.plugin.data.formulas ?? {};
+
+        const entries = Object.entries(formulas);
+        if (!entries.length) {
             container.createSpan({ text: "No saved formulas yet." });
             return;
         }
 
-        for (let i = 0; i < this.plugin.data.customFormulas.length; i++) {
-            const formula = this.plugin.data.customFormulas[i];
+        for (const [alias, formula] of entries) {
             const row = container.createDiv("saved-formula-row");
             const label = row.createDiv("saved-formula-label");
-            label.createSpan({ text: formula });
+            label.createSpan({ text: alias, cls: "saved-formula-alias" });
+            label.createSpan({ text: formula, cls: "saved-formula-expression" });
 
             const actions = row.createDiv("saved-formula-actions");
             new ExtraButtonComponent(actions)
@@ -48,7 +51,7 @@ export default class SavedFormulasView extends ItemView {
                 .setIcon(Icons.DELETE)
                 .setTooltip("Delete")
                 .onClick(async () => {
-                    this.plugin.data.customFormulas.splice(i, 1);
+                    delete this.plugin.data.formulas[alias];
                     await this.plugin.saveSettings();
                     this.render();
                 });
