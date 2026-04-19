@@ -6,11 +6,11 @@
     import { Icons } from "src/utils/icons";
     import { createEventDispatcher } from "svelte";
     import type DiceRollerPlugin from "src/main";
-    import type DiceView from "../dice-tray";
+    import type DiceTrayView from "../dice-tray";
 
     export let settings: DiceRollerSettings;
     export let plugin: DiceRollerPlugin;
-    export let view: DiceView;
+    export let view: DiceTrayView;
 
     const roll = (node: HTMLDivElement) => {
         new ExtraButtonComponent(node).setIcon(Icons.DICE);

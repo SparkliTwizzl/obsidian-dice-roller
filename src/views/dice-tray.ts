@@ -29,7 +29,7 @@ export interface ViewResult {
     id: string;
 }
 
-export default class DiceView extends ItemView {
+export default class DiceTrayView extends ItemView {
     noResultsEl: HTMLSpanElement;
     rollButton: ButtonComponent;
     saveButton: ExtraButtonComponent;
@@ -50,7 +50,7 @@ export default class DiceView extends ItemView {
     #icons = IconManager;
     constructor(public plugin: DiceRollerPlugin, public leaf: WorkspaceLeaf) {
         super(leaf);
-        this.contentEl.addClass("dice-roller-view");
+        this.contentEl.addClass("dice-tray-view");
 
         this.addChild(this.#icons);
 

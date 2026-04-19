@@ -4,7 +4,7 @@ import { StackRoller } from "./rollers/dice/stack";
 
 import SettingTab from "./settings/settings";
 
-import DiceView, { VIEW_TYPE } from "./views/dice-tray";
+import DiceTrayView, { VIEW_TYPE } from "./views/dice-tray";
 import { DiceRenderer, type RendererData } from "./renderer/renderer";
 import { Lexer } from "./lexer/lexer";
 import { type RollerOptions } from "./api/api";
@@ -55,7 +55,7 @@ export default class DiceRollerPlugin extends Plugin {
 
         this.registerView(
             VIEW_TYPE,
-            (leaf: WorkspaceLeaf) => new DiceView(this, leaf)
+            (leaf: WorkspaceLeaf) => new DiceTrayView(this, leaf)
         );
 
         this.registerEvent(
@@ -65,7 +65,7 @@ export default class DiceRollerPlugin extends Plugin {
                     return;
                 }
                 if (!(roller instanceof StackRoller)) {
-                    new Notice("The Dice View only supports dice rolls.");
+                    new Notice("The Dice Tray only supports dice rolls.");
                     return;
                 }
                 await roller.roll();
@@ -89,10 +89,10 @@ export default class DiceRollerPlugin extends Plugin {
 
         this.addCommand({
             id: "open-view",
-            name: "Open Dice View",
+            name: "Open Dice Tray",
             callback: () => {
                 if (!this.view) {
-                    this.addDiceView();
+                    this.addDiceTrayView();
                 } else {
                     this.app.workspace.revealLeaf(this.view.leaf);
                 }
@@ -108,7 +108,7 @@ export default class DiceRollerPlugin extends Plugin {
         this.registerEditorExtension([inlinePlugin(this)]);
 
         this.app.workspace.onLayoutReady(async () => {
-            this.addDiceView(true);
+            this.addDiceTrayView(true);
         });
 
         this.app.workspace.trigger("dice-roller:loaded");
@@ -117,11 +117,11 @@ export default class DiceRollerPlugin extends Plugin {
     get view() {
         const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE);
         const leaf = leaves.length ? leaves[0] : null;
-        if (leaf && leaf.view && leaf.view instanceof DiceView)
+        if (leaf && leaf.view && leaf.view instanceof DiceTrayView)
             return leaf.view;
     }
 
-    async addDiceView(startup = false) {
+    async addDiceTrayView(startup = false) {
         if (startup && !this.data.showLeafOnStartup) return;
         if (this.app.workspace.getLeavesOfType(VIEW_TYPE).length) {
             return;

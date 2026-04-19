@@ -633,19 +633,19 @@ The roll result is only visible in the tooltip.
 Example for a DnD saving throw, use: `dice: 1d20 + 2|nodice|text(Dexterity +2)`
 When hovering on top of `Dexterity +2`, you'll see a random saving throw result (click to reroll as usual).
 
-# The Dice View
+# The Dice Tray
 
-The plugin comes with a Dice View that can be added to the workspace.
+The plugin comes with a Dice Tray that can be added to the workspace.
 
-If you have the [Open Dice View on Startup](#open-dice-view-on-startup) setting off or have closed the Dice View, it can be re-opened using the "Open Dice View" command in the command palette.
+If you have the [Open Dice Tray on Startup](#open-dice-tray-on-startup) setting off or have closed the Dice Tray, it can be re-opened using the "Open Dice Tray" command in the command palette.
 
-The Dice View has buttons for common D20 dice set, can be set to roll with advantage or disadvantage, and modifiers can be added.
+The Dice Tray has buttons for common D20 dice set, can be set to roll with advantage or disadvantage, and modifiers can be added.
 
 Formulas can also just be written directly in the `Dice Formula` textbox. These formulas can be saved using the plus button under the text box for quick re-rolling.
 
 # Graphical Dice
 
-3D Dice can be rolled using the Dice View if [Display Graphics for Dice View Rolls](#display-graphics-for-dice-view-rolls) is turned on in settings, the or the [`|render` flag](#render-and-norender) is used in the dice formula.
+3D Dice can be rolled using the Dice Tray if [Display Graphics for Dice Tray Rolls](#display-graphics-for-dice-tray-rolls) is turned on in settings, the or the [`|render` flag](#render-and-norender) is used in the dice formula.
 
 > :pencil: Only the basic D20 set (D4, D6, D8, D10, D12, and D20) can be rolled graphically.
 
@@ -765,19 +765,19 @@ A result from _each_ file with the specified tag will be returned. If this setti
 
 Tag rollers will behave like [Link Rollers](#links) by default. This option is the same as specifying `` `dice: #tag|link` ``.
 
-## Dice View
+## Dice Tray
 
-### Open Dice View on Startup
+### Open Dice Tray on Startup
 
-The [Dice View](#the-dice-view) will automatically open on startup. Otherwise it may be opened with the command "Open Dice View".
+The [Dice Tray](#the-dice-tray) will automatically open on startup. Otherwise it may be opened with the command "Open Dice Tray".
 
 ## Graphical Dice
 
 Settings to control how [graphical dice](#graphical-dice) behave.
 
-### Display Graphics for Dice View Rolls
+### Display Graphics for Dice Tray Rolls
 
-Rolls made in the [Dice View](#the-dice-view) will use graphics.
+Rolls made in the [Dice Tray](#the-dice-tray) will use graphics.
 
 ### Display Time for Dice Graphics
 

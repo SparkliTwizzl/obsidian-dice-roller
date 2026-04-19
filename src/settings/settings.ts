@@ -536,7 +536,7 @@ export default class SettingTab extends PluginSettingTab {
         new Setting(containerEl)
             .setName("Open Dice Tray on Startup")
             .setDesc(
-                "The dice view can always be opened using the command from the command palette."
+                "The dice tray can always be opened using the command from the command palette."
             )
             .addToggle((t) => {
                 t.setValue(this.plugin.data.showLeafOnStartup);
@@ -704,7 +704,7 @@ export default class SettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName("Display graphics for Dice Tray Rolls")
-            .setDesc("Dice rolls from dice view will be displayed on screen.")
+            .setDesc("Dice rolls from dice tray will be displayed on screen.")
             .addToggle((t) => {
                 t.setValue(this.plugin.data.renderer);
                 t.onChange(async (v) => {
