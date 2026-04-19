@@ -77,7 +77,8 @@ export default class SavedFormulasView extends ItemView {
                         .onChange((v) => (toSave.formula = v));
 
                     const doneBtn = new ExtraButtonComponent(actionsEl)
-                        .setIcon(Icons.DONE)
+                        .setIcon(Icons.SAVE)
+                        .setTooltip("Save")
                         .onClick(async () => {
                             if (!toSave.alias || !toSave.formula) return;
                             // If alias changed, remove old key
@@ -91,6 +92,7 @@ export default class SavedFormulasView extends ItemView {
 
                     new ExtraButtonComponent(actionsEl)
                         .setIcon(Icons.CANCEL)
+                        .setTooltip("Cancel")
                         .onClick(() => this.render());
                 });
 

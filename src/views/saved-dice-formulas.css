@@ -65,9 +65,27 @@
 
 .dice-saved-formulas-view .saved-formula-edit {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     gap: 0.5rem;
-    align-items: center;
+    align-items: stretch;
+}
+
+.dice-saved-formulas-view .saved-formula-edit .saved-formula-actions {
+    align-self: flex-end;
+    margin-top: 0.25rem;
+}
+
+.dice-saved-formulas-view .saved-formula-edit-alias,
+.dice-saved-formulas-view .saved-formula-edit-expression {
+    width: 100%;
+}
+
+.dice-saved-formulas-view .saved-formula-edit-alias .text-input,
+.dice-saved-formulas-view .saved-formula-edit-expression .text-input,
+.dice-saved-formulas-view .saved-formula-edit-alias input,
+.dice-saved-formulas-view .saved-formula-edit-expression input {
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .dice-saved-formulas-view .saved-formulas-footer {
