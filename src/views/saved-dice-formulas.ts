@@ -31,13 +31,11 @@ export default class SavedFormulasView extends ItemView {
         }
 
         for (const [alias, formula] of entries) {
-            const row = container.createDiv("saved-formula-row");
-            const label = row.createDiv("saved-formula-label");
-            label.createSpan({ text: alias, cls: "saved-formula-alias" });
-            label.createSpan({ text: formula, cls: "saved-formula-expression" });
 
-            const actions = row.createDiv("saved-formula-actions");
-            new ExtraButtonComponent(actions)
+            const row = container.createDiv("saved-formula-row");
+
+            const roll = row.createDiv("saved-formula-roll");
+            new ExtraButtonComponent(roll)
                 .setIcon(Icons.DICE)
                 .setTooltip("Roll")
                 .onClick(async () => {
@@ -46,6 +44,12 @@ export default class SavedFormulasView extends ItemView {
                         await roller.roll().catch(() => {});
                     }
                 });
+
+            const label = row.createDiv("saved-formula-label");
+            label.createSpan({ text: alias, cls: "saved-formula-alias" });
+            label.createSpan({ text: formula, cls: "saved-formula-expression" });
+
+            const actions = row.createDiv("saved-formula-actions");
 
             new ExtraButtonComponent(actions)
                 .setIcon(Icons.EDIT)
