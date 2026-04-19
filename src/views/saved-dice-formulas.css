@@ -4,12 +4,11 @@
     gap: 0.5rem;
 }
 
-/* Divider element separating the list from footer */
 .dice-saved-formulas-view .saved-formulas-divider {
     width: 100%;
     height: 1px;
     background: var(--background-modifier-border, rgba(0, 0, 0, 0.08));
-    margin: 0 0 0.5rem 0;
+    margin: 1.0rem 0;
 }
 
 .dice-saved-formulas-view .saved-formula-label {
@@ -51,4 +50,20 @@
 .dice-saved-formulas-view .saved-formula-edit-alias,
 .dice-saved-formulas-view .saved-formula-edit-expression {
     flex: 1 1 auto;
+}
+
+.dice-saved-formulas-view .saved-formulas-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.dice-saved-formulas-view .clear-saved-formulas {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dice-saved-formulas-view .clear-saved-formulas-label {
+    font-weight: 600;
+    white-space: nowrap;
 }
