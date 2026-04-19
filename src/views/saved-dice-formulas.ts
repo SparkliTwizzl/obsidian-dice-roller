@@ -109,31 +109,32 @@ export default class SavedFormulasView extends ItemView {
         const footer = this.contentEl.createDiv("saved-formulas-footer");
         const clearBtnWrap = footer.createDiv("clear-saved-formulas");
         clearBtnWrap.createSpan({ cls: "clear-saved-formulas-label", text: "Clear All Saved Formulas" });
-        new ExtraButtonComponent(clearBtnWrap)
+        const clearBtn = new ExtraButtonComponent(clearBtnWrap)
             .setIcon(Icons.DELETE)
-            .setTooltip("Clear All Saved Formulas")
-            .onClick(async (b?: any) => {
-                const key = "__formulas_reset_confirm";
-                if ((b as any)?.[key]) {
-                    this.plugin.data.formulas = {};
-                    await this.plugin.saveSettings();
-                    new Notice("Saved formulas cleared.");
-                    this.render();
-                    return;
-                }
+            .setTooltip("Clear All Saved Formulas");
 
-                if (b) (b as any)[key] = true;
+        clearBtn.onClick(async () => {
+            const key = "__formulas_reset_confirm";
+            if ((clearBtn as any)[key]) {
+                this.plugin.data.formulas = {};
+                await this.plugin.saveSettings();
+                new Notice("Saved formulas cleared.");
+                this.render();
+                return;
+            }
+
+            (clearBtn as any)[key] = true;
+            try {
+                clearBtn.setIcon(Icons.WARNING).setTooltip(`Click again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
+            } catch (e) {}
+            new Notice(`This is a destructive action. Click the button again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
+            setTimeout(() => {
+                (clearBtn as any)[key] = false;
                 try {
-                    if (b) b.setIcon(Icons.WARNING).setTooltip(`Click again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
+                    clearBtn.setIcon(Icons.DELETE).setTooltip("Clear All Saved Formulas");
                 } catch (e) {}
-                new Notice(`This is a destructive action. Click the button again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
-                setTimeout(() => {
-                    if (b) (b as any)[key] = false;
-                    try {
-                        if (b) b.setIcon(Icons.DELETE).setTooltip("Clear All Saved Formulas");
-                    } catch (e) {}
-                }, CONFIRM_TIMEOUT_MILLISECONDS);
-            });
+            }, CONFIRM_TIMEOUT_MILLISECONDS);
+        });
     }
 
     getDisplayText() {
