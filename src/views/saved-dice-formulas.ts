@@ -1,4 +1,5 @@
-import { ExtraButtonComponent, ItemView, WorkspaceLeaf, TextComponent } from "obsidian";
+import { ExtraButtonComponent, ItemView, WorkspaceLeaf, TextComponent, Notice } from "obsidian";
+import { CONFIRM_TIMEOUT_MILLISECONDS, CONFIRM_TIMEOUT_SECONDS } from "src/utils/constants";
 import type DiceRollerPlugin from "src/main";
 import { Icons } from "src/utils/icons";
 import { API } from "src/api/api";
@@ -101,6 +102,36 @@ export default class SavedFormulasView extends ItemView {
                     this.render();
                 });
         }
+
+        // add clear all button at bottom mirroring settings behavior
+        const footer = this.contentEl.createDiv("saved-formulas-footer");
+        const clearBtnWrap = footer.createDiv("clear-saved-formulas");
+        new ExtraButtonComponent(clearBtnWrap)
+            .setIcon(Icons.DELETE)
+            .setTooltip("Clear Saved Formulas")
+            .onClick(async (b?: any) => {
+                const key = "__formulas_reset_confirm";
+                if ((b as any)?.[key]) {
+                    this.plugin.data.formulas = {};
+                    await this.plugin.saveSettings();
+                    new Notice("Saved formulas cleared.");
+                    this.render();
+                    return;
+                }
+
+                if (b) (b as any)[key] = true;
+                // show warning state on the button if possible
+                try {
+                    if (b) b.setIcon(Icons.WARNING).setTooltip(`Click again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
+                } catch (e) {}
+                new Notice(`This is a destructive action. Click the reset button again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
+                setTimeout(() => {
+                    if (b) (b as any)[key] = false;
+                    try {
+                        if (b) b.setIcon(Icons.DELETE).setTooltip("Clear Saved Formulas");
+                    } catch (e) {}
+                }, CONFIRM_TIMEOUT_MILLISECONDS);
+            });
     }
 
     getDisplayText() {

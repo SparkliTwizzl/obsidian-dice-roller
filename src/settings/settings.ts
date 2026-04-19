@@ -20,6 +20,7 @@ import { generateSlug } from "random-word-slugs";
 import { FontSuggestionModal } from "src/suggester/fonts";
 import { FolderInputSuggest } from "@javalent/utilities";
 import { Icons } from "src/utils/icons";
+import { CONFIRM_TIMEOUT_SECONDS, CONFIRM_TIMEOUT_MILLISECONDS } from "src/utils/constants";
 import { Lexer } from "src/lexer/lexer";
 import { ButtonPosition } from "./settings.types";
 import { DiceRenderer } from "src/renderer/renderer";
@@ -48,8 +49,7 @@ export default class SettingTab extends PluginSettingTab {
     iconsEl: HTMLDivElement;
     contentEl: HTMLDivElement;
     pathsEl: HTMLDivElement;
-    readonly #CONFIRM_TIMEOUT_SECONDS = 3;
-    readonly #CONFIRM_TIMEOUT_MILLISECONDS = this.#CONFIRM_TIMEOUT_SECONDS * 1000;
+    // confirmation timeout moved to src/utils/constants
 
     constructor(app: App, public plugin: DiceRoller) {
         super(app, plugin);
@@ -387,14 +387,14 @@ export default class SettingTab extends PluginSettingTab {
 
                         // first click: warn and set confirmation window
                         (b as any)[key] = true;
-                        b.setIcon(Icons.WARNING).setTooltip(`Click again within ${this.#CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
-                        new Notice(`This is a destructive action. Click the reset button again within ${this.#CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
+                        b.setIcon(Icons.WARNING).setTooltip(`Click again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
+                        new Notice(`This is a destructive action. Click the reset button again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
                         setTimeout(() => {
                             (b as any)[key] = false;
                             try {
                                 b.setIcon(Icons.RESET).setTooltip("Reset to Default");
                             } catch (e) {}
-                        }, this.#CONFIRM_TIMEOUT_MILLISECONDS);
+                        }, CONFIRM_TIMEOUT_MILLISECONDS);
                     });
             });
 
@@ -964,14 +964,14 @@ export default class SettingTab extends PluginSettingTab {
                         }
 
                         (b as any)[key] = true;
-                        b.setIcon(Icons.WARNING).setTooltip(`Click again within ${this.#CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
-                        new Notice(`This is a destructive action. Click the reset button again within ${this.#CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
+                        b.setIcon(Icons.WARNING).setTooltip(`Click again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
+                        new Notice(`This is a destructive action. Click the reset button again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
                         setTimeout(() => {
                             (b as any)[key] = false;
                             try {
                                 b.setIcon(Icons.DELETE).setTooltip("Clear Saved Formulas");
                             } catch (e) {}
-                        }, this.#CONFIRM_TIMEOUT_MILLISECONDS);
+                        }, CONFIRM_TIMEOUT_MILLISECONDS);
                     });
             });
     }

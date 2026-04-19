@@ -17,3 +17,6 @@ export const ROLL_ALIAS_INDICATOR = "@";
 export const RESULT_SEPARATOR_OVERRIDE_REGEX = new RegExp(`^${RESULT_SEPARATOR_OVERRIDE_INDICATOR}\\s*"(.*?)"$`, "s");
 export const ROLL_ALIAS_REGEX = new RegExp(`\\s*${ROLL_ALIAS_INDICATOR}\\s*"(.+?)"\\s*$`, "s");
 export const CHAINED_ROLL_ALIAS_REGEX = new RegExp(`^\\s*(?:${RESULT_SEPARATOR_OVERRIDE_INDICATOR}\\s*".*?")?\\s*${ROLL_ALIAS_INDICATOR}\\s*"(.+?)"\\s*$`, "s");
+
+export const CONFIRM_TIMEOUT_SECONDS = 3;
+export const CONFIRM_TIMEOUT_MILLISECONDS = CONFIRM_TIMEOUT_SECONDS * 1000;
