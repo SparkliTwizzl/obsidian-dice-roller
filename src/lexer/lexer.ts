@@ -148,128 +148,125 @@ class LexerClass {
                 associativity: ASSOC_RIGHT
             }
         });
+        this.#buildLexer();
     }
 
-    lexer = moo.compile({
-        WS: [{ match: /[ \t]+/u }, { match: /[{}]+/u }],
-        table: TABLE_REGEX,
-        line: LINE_REGEX,
-        section: SECTION_REGEX,
-        tag: TAG_REGEX,
-        dataview: DATAVIEW_REGEX,
-
-        condition: CONDITIONAL_REGEX,
-
-        kl: { match: /kl\d*/u, value: this.clampInfinite },
-        kh: [
-            { match: /kh\d*/u, value: this.clampInfinite },
-            { match: /k\d*/u, value: this.clampInfinite }
-        ],
-        dh: { match: /dh\d*/u, value: this.clampInfinite },
-        dl: [{ match: /dl\d*/u, value: this.clampInfinite }],
-        "!!": {
-            match: /!!(?:i|\d+)?/u,
-            value: this.clampInfinite
-        },
-        "!": {
-            match: /!(?:i|\d+)?/u,
-            value: this.clampInfinite
-        },
-        r: {
-            match: /r(?:i|\d+)?/u,
-            value: this.clampInfinite
-        },
-        u: /u/u,
-        narrative: {
-            match: /^(?:\d*(?:[GgYyBbRrPpSsWw]|[AaPpCcBbSsFf]|pro|boo|blk|k|sb|diff))(?: ?\d*(?:[GgYyBbRrPpSsWw]|[AaPpDdCcBbSsFf]|pro|boo|blk|k|sb|diff))+$/u,
-            value: (match) => {
-                const isAbbr = /[AaCcDd]/.test(match);
-                return match
-                    .toLowerCase()
-                    .replace(/pro/g, "y")
-                    .replace(/diff/g, "p")
-                    .replace(/(blk|k|sb)/g, "s")
-                    .replace(/boo/g, "b")
-                    .replace(/p/g, isAbbr ? "y" : "p")
-                    .replace(/a/g, "g")
-                    .replace(/d/g, "p")
-                    .replace(/c/g, "r")
-                    .replace(/f/g, "w")
-                    .replace(/ /g, "")
-                    .replace(/(\d+)(\w)/g, (_, num: string, char: string) =>
-                        char.repeat(Number(num))
-                    )
-            }
-        },
-        stunt: /1[Dd]S/u,
-        "%": /\d+[Dd]\d+%/u,
-        fudge: {
-            match: /(?:\d*[Dd])?[Dd]?F/u,
-            value: (match) => {
-                const { roll = this.defaultRoll } = match.match(
-                    /(?:(?<roll>\d*)[Dd])?F/
-                ).groups;
-                return `${roll}dF`;
-            }
-        },
-        dice: [
-            {
-                match: OMITTED_REGEX,
-                value: (match) => {
-                    const {
-                        roll = this.defaultRoll,
-                        faces = this.defaultFace
-                    } = match.match(
-                        /(?<roll>\d+)?[Dd](?<faces>%|-?\d+|\[\d+(?:[ \t]*[,-][ \t]*\d+)+\])?/
-                    ).groups;
-                    return `${roll}d${faces}`;
-                }
-            },
-            { match: /\d+/u },
-            {
-                match: /\b[A-Za-z][A-Za-z0-9_]+\b/u,
-                value: (match) => {
-                    return (
-                        DataviewManager.getFieldValueFromActiveFile(match) ??
-                        match
-                    );
-                }
-            }
-        ],
-        sort: [
-            {
-                match: /s(?:a|d)*/u,
-                value: (str) => (str == "s" || str == "sa" ? "sa" : "sd")
-            }
-        ],
-        math: MATH_REGEX
-    });
-
+    lexer: moo.Lexer;
     parser: Parser;
     inline: Map<string, number> = new Map();
     defaultFace: number;
     defaultRoll: number;
     isChainRollerEnabled: boolean = false;
+    isRollAliasingEnabled: boolean = false;
 
-    clampInfinite(match: string) {
-        if (/i$/.test(match)) return "100";
-        return match.replace(/^\D+/g, "");
-    }
-    public setInlineFields(fields: Map<string, number>) {
-        this.inline = fields;
-    }
-    public setDefaults(roll: number, face: number) {
-        this.defaultRoll = roll;
-        this.defaultFace = face;
-    }
-    public setDefaultRoll(roll: number) {
-        this.defaultRoll = roll;
-    }
-    public setDefaultFace(face: number) {
-        this.defaultFace = face;
-    }
-    public setEnableChainRoller(enabled: boolean) {
-        this.isChainRollerEnabled = enabled;
+    #buildLexer() {
+        let rules: Record<string, any> = {
+            WS: [{ match: /[ \t]+/u }, { match: /[{}]+/u }],
+            table: TABLE_REGEX,
+            line: LINE_REGEX,
+            section: SECTION_REGEX,
+            tag: TAG_REGEX,
+            dataview: DATAVIEW_REGEX,
+    
+            condition: CONDITIONAL_REGEX,
+    
+            kl: { match: /kl\d*/u, value: this.clampInfinite },
+            kh: [
+                { match: /kh\d*/u, value: this.clampInfinite },
+                { match: /k\d*/u, value: this.clampInfinite }
+            ],
+            dh: { match: /dh\d*/u, value: this.clampInfinite },
+            dl: [{ match: /dl\d*/u, value: this.clampInfinite }],
+            "!!": {
+                match: /!!(?:i|\d+)?/u,
+                value: this.clampInfinite
+            },
+            "!": {
+                match: /!(?:i|\d+)?/u,
+                value: this.clampInfinite
+            },
+            r: {
+                match: /r(?:i|\d+)?/u,
+                value: this.clampInfinite
+            },
+            u: /u/u,
+            narrative: {
+                match: /^(?:\d*(?:[GgYyBbRrPpSsWw]|[AaPpCcBbSsFf]|pro|boo|blk|k|sb|diff))(?: ?\d*(?:[GgYyBbRrPpSsWw]|[AaPpDdCcBbSsFf]|pro|boo|blk|k|sb|diff))+$/u,
+                value: (match: string) => {
+                    const isAbbr = /[AaCcDd]/.test(match);
+                    return match
+                        .toLowerCase()
+                        .replace(/pro/g, "y")
+                        .replace(/diff/g, "p")
+                        .replace(/(blk|k|sb)/g, "s")
+                        .replace(/boo/g, "b")
+                        .replace(/p/g, isAbbr ? "y" : "p")
+                        .replace(/a/g, "g")
+                        .replace(/d/g, "p")
+                        .replace(/c/g, "r")
+                        .replace(/f/g, "w")
+                        .replace(/ /g, "")
+                        .replace(/(\d+)(\w)/g, (_, num: string, char: string) =>
+                            char.repeat(Number(num))
+                        )
+                }
+            },
+            stunt: /1[Dd]S/u,
+            "%": /\d+[Dd]\d+%/u,
+            fudge: {
+                match: /(?:\d*[Dd])?[Dd]?F/u,
+                value: (match: string) => {
+                    const { roll = this.defaultRoll } = match.match(
+                        /(?:(?<roll>\d*)[Dd])?F/
+                    ).groups;
+                    return `${roll}dF`;
+                }
+            },
+            dice: [
+                {
+                    match: OMITTED_REGEX,
+                    value: (match: string) => {
+                        const {
+                            roll = this.defaultRoll,
+                            faces = this.defaultFace
+                        } = match.match(
+                            /(?<roll>\d+)?[Dd](?<faces>%|-?\d+|\[\d+(?:[ \t]*[,-][ \t]*\d+)+\])?/
+                        ).groups;
+                        return `${roll}d${faces}`;
+                    }
+                },
+                { match: /\d+/u },
+                {
+                    match: /\b[A-Za-z][A-Za-z0-9_]+\b/u,
+                    value: (match: string) => {
+                        return (
+                            DataviewManager.getFieldValueFromActiveFile(match) ??
+                            match
+                        );
+                    }
+                }
+            ],
+            sort: [
+                {
+                    match: /s(?:a|d)*/u,
+                    value: (str: string) => (str == "s" || str == "sa" ? "sa" : "sd")
+                }
+            ],
+            math: MATH_REGEX
+        };
+        if (this.isRollAliasingEnabled) {
+            rules.rollAlias = {
+                match: ROLL_ALIAS_REGEX,
+                value: (match: string) => {
+                    return match
+                        .replace(new RegExp(`${ROLL_ALIAS_INDICATOR}\\s*`, "g"), "")
+                        .replace(/\\"/g, "{ESCAPED_QUOTE}")
+                        .replace(/"/g, "")
+                        .replace(/{ESCAPED_QUOTE}/g, '"');
+                }
+            }
+        }
+        this.lexer = moo.compile(rules);
     }
     #parseChainedRolls(input: string): Result<LexicalToken[], string> {
         try {
@@ -355,6 +352,31 @@ class LexerClass {
             console.error(e);
             return Err(e.message);
         }
+    }
+
+    clampInfinite(match: string) {
+        if (/i$/.test(match)) return "100";
+        return match.replace(/^\D+/g, "");
+    }
+    public setInlineFields(fields: Map<string, number>) {
+        this.inline = fields;
+    }
+    public setDefaults(roll: number, face: number) {
+        this.defaultRoll = roll;
+        this.defaultFace = face;
+    }
+    public setDefaultRoll(roll: number) {
+        this.defaultRoll = roll;
+    }
+    public setDefaultFace(face: number) {
+        this.defaultFace = face;
+    }
+    public setEnableChainRoller(enabled: boolean) {
+        this.isChainRollerEnabled = enabled;
+    }
+    public setEnableRollAliasing(enabled: boolean) {
+        this.isRollAliasingEnabled = enabled;
+        this.#buildLexer();
     }
     parse(input: string): Result<LexicalToken[], string> {
         try {
