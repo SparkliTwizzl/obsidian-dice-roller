@@ -18,7 +18,6 @@ export const TABLE_REGEX = /(?:.*)?(?:\[.*\]\(|\[\[)(?:.+?)#?\^(?:.+?)(?:\)|\]\]
 export const TAG_REGEX = /(?:\d+[Dd])?#(?:[\p{Letter}\p{Emoji_Presentation}\w/-]+)(?:\|(?:[+-]))?(?:\|(?:[^+-]+))?/u;
 
 export const LEXEME_TYPE_CHAINED_ROLL = "chainedRoll";
-export const LEXEME_TYPE_CHAINED_ROLL_DELIMITER = "chainedRollDelimiter";
 export const LEXEME_TYPE_DATAVIEW = "dataview";
 export const LEXEME_TYPE_DICE = "dice";
 export const LEXEME_TYPE_LINE = "line";
@@ -369,10 +368,6 @@ class LexerClass {
                 else if (e.value === ")" && parenStack[parenStack.length - 1] === "(") {
                     parenStack.pop();
                 }
-            }
-
-            if (this.isChainRollerEnabled && e.type === LEXEME_TYPE_CHAINED_ROLL_DELIMITER && parenStack.length > 0) {
-                throw new Error(`Chained roll delimiters (${CHAINED_ROLL_DELIMITER}) cannot be inside parentheses.`);
             }
 
             if (isPlusOrMinus(e)) {

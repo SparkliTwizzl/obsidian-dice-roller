@@ -7,13 +7,12 @@ import { ExpectedValue, Round } from "../types/api";
 
 import { decode } from "he";
 import {
-    LEXEME_TYPE_CHAINED_ROLL_DELIMITER,
+    LEXEME_TYPE_CHAINED_ROLL,
     LEXEME_TYPE_DATAVIEW,
     LEXEME_TYPE_DICE,
     LEXEME_TYPE_LINE,
     LEXEME_TYPE_LINK,
     LEXEME_TYPE_NARRATIVE,
-    LEXEME_TYPE_RESULT_SEPARATOR,
     LEXEME_TYPE_SECTION,
     LEXEME_TYPE_TABLE,
     LEXEME_TYPE_TAG,
@@ -152,9 +151,6 @@ class APIInstance implements APIInterface {
         if (lexemes.some(({ type }) => type === LEXEME_TYPE_NARRATIVE)) {
             return LEXEME_TYPE_NARRATIVE;
         }
-        if (lexemes.some(({ type }) => type === LEXEME_TYPE_CHAINED_ROLL_DELIMITER)) {
-            return LEXEME_TYPE_CHAINED_ROLL_DELIMITER;
-        }
         return LEXEME_TYPE_DICE;
     }
     getParametersForRoller(
@@ -265,70 +261,17 @@ class APIInstance implements APIInterface {
     }
 
     #getChainRoller(raw: string, source: string, options: RollerOptions) {
-        const lexemeResult = Lexer.parse(raw);
-        if (lexemeResult.isErr()) {
-            console.error(lexemeResult.unwrapErr());
-            return null;
+        // return not implemented error if chain roller is not enabled
+        if (!this.data.enableChainRoller) {
+            throw new Error("Chain roller is not enabled.");
         }
-        const lexemes = lexemeResult.unwrap();
-
-        let resultSeparator: string | undefined;
-        const segments: string[] = [];
-
-        let buildSegment = (lexemes: LexicalToken[]) => {
-            let segment: string[] = [];
-            for (let i = 0; i < lexemes.length; ++i) {
-                const lexeme = lexemes[i];
-                if (lexeme.type === LEXEME_TYPE_RESULT_SEPARATOR) {
-                    resultSeparator = lexeme.value;
-                    continue;
-                }
-                if (lexeme.type === LEXEME_TYPE_CHAINED_ROLL_DELIMITER) {
-                    return {
-                        segment: segment.join("").trim(),
-                        remainder: lexemes.slice(0, i)
-                    }
-                }
-                segment.push((lexeme.value ?? "").trim());
-            }
-            if (segment.length > 0) {
-                return {
-                    segment: segment.join("").trim(),
-                    remainder: []
-                }
-            }
-                return {
-                    segment: null,
-                    remainder: []
-                }
-        }
-
-        for (let remainder = lexemes; remainder.length > 0;) {
-            let next = buildSegment(remainder);
-            if (next.segment) {
-                segments.push(next.segment);
-            }
-            remainder = next.remainder;
-        }
-
-        const rollers: BasicRoller[] = [];
-        for (const segment of segments) {
-            if (!segment) {
-                continue;
-            }
-            const roller = this.getRoller(segment, source);
-            if (!roller) {
-                console.error(`\`${segment}\` is not a valid dice roll.`);
-                return null;
-            }
-            rollers.push(roller);
-        }
-
-        const chainData = resultSeparator
-            ? Object.assign({}, this.data, { chainedResultSeparator: resultSeparator })
-            : this.data;
-
-        return new ChainRoller(chainData, raw, rollers, this.app, options.position);
+        return new ChainRoller(
+            this.data,
+            raw,
+            [],
+            this.app,
+            options.position ?? this.data.position
+        );
     }
 
     getRoller(
