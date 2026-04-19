@@ -111,7 +111,7 @@ export default class SavedFormulasView extends ItemView {
         clearBtnWrap.createSpan({ cls: "clear-saved-formulas-label", text: "Clear All Saved Formulas" });
         new ExtraButtonComponent(clearBtnWrap)
             .setIcon(Icons.DELETE)
-            .setTooltip("Clear Saved Formulas")
+            .setTooltip("Clear All Saved Formulas")
             .onClick(async (b?: any) => {
                 const key = "__formulas_reset_confirm";
                 if ((b as any)?.[key]) {
@@ -126,11 +126,11 @@ export default class SavedFormulasView extends ItemView {
                 try {
                     if (b) b.setIcon(Icons.WARNING).setTooltip(`Click again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
                 } catch (e) {}
-                new Notice(`This is a destructive action. Click the reset button again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
+                new Notice(`This is a destructive action. Click the button again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
                 setTimeout(() => {
                     if (b) (b as any)[key] = false;
                     try {
-                        if (b) b.setIcon(Icons.DELETE).setTooltip("Clear Saved Formulas");
+                        if (b) b.setIcon(Icons.DELETE).setTooltip("Clear All Saved Formulas");
                     } catch (e) {}
                 }, CONFIRM_TIMEOUT_MILLISECONDS);
             });

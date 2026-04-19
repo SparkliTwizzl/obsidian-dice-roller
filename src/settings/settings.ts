@@ -49,7 +49,6 @@ export default class SettingTab extends PluginSettingTab {
     iconsEl: HTMLDivElement;
     contentEl: HTMLDivElement;
     pathsEl: HTMLDivElement;
-    // confirmation timeout moved to src/utils/constants
 
     constructor(app: App, public plugin: DiceRoller) {
         super(app, plugin);
@@ -385,10 +384,9 @@ export default class SettingTab extends PluginSettingTab {
                             return;
                         }
 
-                        // first click: warn and set confirmation window
                         (b as any)[key] = true;
                         b.setIcon(Icons.WARNING).setTooltip(`Click again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
-                        new Notice(`This is a destructive action. Click the reset button again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
+                        new Notice(`This is a destructive action. Click the button again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
                         setTimeout(() => {
                             (b as any)[key] = false;
                             try {
@@ -965,7 +963,7 @@ export default class SettingTab extends PluginSettingTab {
 
                         (b as any)[key] = true;
                         b.setIcon(Icons.WARNING).setTooltip(`Click again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm`);
-                        new Notice(`This is a destructive action. Click the reset button again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
+                        new Notice(`This is a destructive action. Click the button again within ${CONFIRM_TIMEOUT_SECONDS} seconds to confirm.`);
                         setTimeout(() => {
                             (b as any)[key] = false;
                             try {
