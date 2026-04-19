@@ -568,50 +568,14 @@ test('Lexer should parse "1d6; 1d4 * (1d2 - 1); ~\"|\"" when ChainRoller is enab
         {
             conditions: undefined,
             parenedDice: undefined,
-            type: "dice",
+            type: "chainedRoll",
             value: "1d6"
         },
         {
             conditions: undefined,
             parenedDice: undefined,
-            type: "chainedRollDelimiter",
-            value: ";"
-        },
-        {
-            conditions: undefined,
-            parenedDice: undefined,
-            type: "dice",
-            value: "1d4"
-        },
-        {
-            conditions: undefined,
-            parenedDice: undefined,
-            type: "math",
-            value: "*"
-        },
-        {
-            conditions: undefined,
-            parenedDice: undefined,
-            type: "dice",
-            value: "1d2"
-        },
-        {
-            conditions: undefined,
-            parenedDice: undefined,
-            type: "math",
-            value: "-"
-        },
-        {
-            conditions: undefined,
-            parenedDice: undefined,
-            type: "dice",
-            value: "1"
-        },
-        {
-            conditions: undefined,
-            parenedDice: undefined,
-            type: "chainedRollDelimiter",
-            value: ";"
+            type: "chainedRoll",
+            value: "1d4 * (1d2 - 1)"
         },
         {
             conditions: undefined,
