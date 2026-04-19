@@ -11,6 +11,17 @@
     margin: 1.0rem 0;
 }
 
+.dice-saved-formulas-view .saved-formulas-header-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.dice-saved-formulas-view .saved-formulas-header {
+    text-align: center;
+    margin: 0;
+}
+
 .dice-saved-formulas-view .saved-formula-label {
     display: flex;
     flex-direction: column;

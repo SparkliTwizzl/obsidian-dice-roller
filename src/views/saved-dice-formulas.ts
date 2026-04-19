@@ -18,11 +18,12 @@ export default class SavedFormulasView extends ItemView {
 
     render() {
         this.contentEl.empty();
-        const header = this.contentEl.createDiv("results-header-container");
-        header.createEl("h4", { cls: "results-header", text: "Saved Dice Formulas" });
+        const header = this.contentEl.createDiv("saved-formulas-header-container");
+        header.createEl("h3", { cls: "saved-formulas-header", text: "Saved Dice Formulas" });
+
+        this.contentEl.createDiv("saved-formulas-divider");
 
         const container = this.contentEl.createDiv("saved-formulas-container");
-
         const formulas = this.plugin.data.formulas ?? {};
 
         const entries = Object.entries(formulas);
@@ -103,11 +104,11 @@ export default class SavedFormulasView extends ItemView {
                 });
         }
 
-        // add divider then clear all button at bottom mirroring settings behavior
-        const divider = this.contentEl.createDiv("saved-formulas-divider");
+        this.contentEl.createDiv("saved-formulas-divider");
+
         const footer = this.contentEl.createDiv("saved-formulas-footer");
         const clearBtnWrap = footer.createDiv("clear-saved-formulas");
-            const clearLabel = clearBtnWrap.createSpan({ cls: "clear-saved-formulas-label", text: "Clear All Saved Formulas" });
+        clearBtnWrap.createSpan({ cls: "clear-saved-formulas-label", text: "Clear All Saved Formulas" });
         new ExtraButtonComponent(clearBtnWrap)
             .setIcon(Icons.DELETE)
             .setTooltip("Clear Saved Formulas")
