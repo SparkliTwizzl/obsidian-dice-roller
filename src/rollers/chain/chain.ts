@@ -9,6 +9,8 @@ export class ChainRoller extends BasicRoller {
     subRollers: BasicRoller[] = [];
     app: App;
 
+    private _resultSeparator?: string;
+
     private async executeRoll() {
         let subResults = [];
         for (let i = 0; i < this.subRollers.length; ++i) {
@@ -43,7 +45,7 @@ export class ChainRoller extends BasicRoller {
             .replace(/\r/g, "\\r")
             .replace(/\n/g, "\\n");
 
-        const rawSeparator = (this.data && (this.data as any).chainedResultSeparator) ?? CHAINED_RESULT_SEPARATOR;
+        const rawSeparator = this._resultSeparator ?? CHAINED_RESULT_SEPARATOR;
         const decodedSeparator = decodeEscapedControlChars(rawSeparator);
         const displayJoiner = decodedSeparator.endsWith("\n") ? decodedSeparator.trimEnd() : decodedSeparator;
 
@@ -69,11 +71,13 @@ export class ChainRoller extends BasicRoller {
         original: string,
         subRollers: BasicRoller[],
         app: App,
-        position = data.position
+        position = data.position,
+        resultSeparator?: string
     ) {
         super(data, original, [] as any, position);
         this.subRollers = subRollers;
         this.app = app;
+        this._resultSeparator = resultSeparator;
     }
 
     addContexts(...components: any[]) {
