@@ -4,7 +4,8 @@ import { DataviewManager } from "src/api/api.dataview";
 import type { Conditional } from "src/rollers/dice/dice";
 import {
     CHAINED_ROLL_DELIMITER,
-    RESULT_SEPARATOR_INDICATOR
+    RESULT_SEPARATOR_INDICATOR,
+    ROLL_ALIAS_INDICATOR
 } from "src/utils/constants";
 
 export const CONDITIONAL_REGEX = /(?:=|=!|<|>|<=|>=|=<|=>|-=|=-)(?:\d+(?:[Dd](?:%|F|-?\d+|\[\d+(?:[ \t]*[,-][ \t]*\d+)+\]|\b))?)/u;
@@ -13,11 +14,12 @@ export const LINE_REGEX = /(?:\d+[Dd])?(?:\[.*\]\(|\[\[)(?:.+)(?:\)|\]\])\|line/
 export const MATH_REGEX = /[\(\^\+\-\*\/\)]/u;
 export const OMITTED_REGEX = /(?:\d+|\b)[Dd](?:%|F|-?\d+|\[\d+(?:[ \t]*[,-][ \t]*\d+)+\]|\b)/u;
 export const RESULT_SEPARATOR_REGEX = new RegExp(`${RESULT_SEPARATOR_INDICATOR}\\s*".*"`, "u");
+export const ROLL_ALIAS_REGEX = new RegExp(`${ROLL_ALIAS_INDICATOR}\\s*".*"\\s*$`, "u");
 export const SECTION_REGEX = /(?:\d+[Dd])?(?:\[.*\]\(|\[\[)(?:.+)(?:\)|\]\])\|?(?:.+)?/u;
 export const TABLE_REGEX = /(?:.*)?(?:\[.*\]\(|\[\[)(?:.+?)#?\^(?:.+?)(?:\)|\]\])\|?(?:.+)?/u;
 export const TAG_REGEX = /(?:\d+[Dd])?#(?:[\p{Letter}\p{Emoji_Presentation}\w/-]+)(?:\|(?:[+-]))?(?:\|(?:[^+-]+))?/u;
 
-export const LEXEME_TYPE_ALIAS = "alias";
+export const LEXEME_TYPE_ROLL_ALIAS = "rollAlias";
 export const LEXEME_TYPE_CHAINED_ROLL = "chainedRoll";
 export const LEXEME_TYPE_DATAVIEW = "dataview";
 export const LEXEME_TYPE_DICE = "dice";
@@ -293,14 +295,34 @@ class LexerClass {
             }
 
             const tokens: LexicalToken[] = [];
-            let resultSeparator: string | null = null;
+            let lastSegment = segments[segments.length - 1].trim();
+            let shouldPopLast = false;
 
-            const lastSegment = segments[segments.length - 1].trim();
+            let rollAlias: string | undefined = undefined;
+            const rollAliasMatch = lastSegment.match(ROLL_ALIAS_REGEX);
+            if (rollAliasMatch) {
+                rollAlias = rollAliasMatch[0]
+                .replace(new RegExp(`${ROLL_ALIAS_INDICATOR}\\s*`, "g"), "")
+                .replace(/\\"/g, "{ESCAPED_QUOTE}")
+                .replace(/"/g, "")
+                .replace(/{ESCAPED_QUOTE}/g, '"');
+                lastSegment = lastSegment.replace(ROLL_ALIAS_REGEX, "").trim();
+                shouldPopLast = true;
+            }
+
+            let resultSeparator: string | undefined = undefined;
             const resultSeparatorMatch = lastSegment.match(RESULT_SEPARATOR_REGEX);
             if (resultSeparatorMatch) {
                 resultSeparator = resultSeparatorMatch[0]
                     .replace(new RegExp(`${RESULT_SEPARATOR_INDICATOR}\\s*`, "g"), "")
-                    .replace(/"/g, "");
+                    .replace(/\\"/g, "{ESCAPED_QUOTE}")
+                    .replace(/"/g, "")
+                    .replace(/{ESCAPED_QUOTE}/g, '"');
+                lastSegment = lastSegment.replace(RESULT_SEPARATOR_REGEX, "").trim();
+                shouldPopLast = true;
+            }
+
+            if (shouldPopLast) {
                 segments.pop();
             }
 
@@ -318,6 +340,13 @@ class LexerClass {
                 tokens.push({
                     type: LEXEME_TYPE_RESULT_SEPARATOR,
                     value: resultSeparator
+                } as LexicalToken);
+            }
+
+            if (rollAlias) {
+                tokens.push({
+                    type: LEXEME_TYPE_ROLL_ALIAS,
+                    value: rollAlias
                 } as LexicalToken);
             }
 

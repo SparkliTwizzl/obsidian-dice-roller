@@ -7,7 +7,7 @@ import { ExpectedValue, Round } from "../types/api";
 
 import { decode } from "he";
 import {
-    LEXEME_TYPE_ALIAS,
+    LEXEME_TYPE_ROLL_ALIAS,
     LEXEME_TYPE_CHAINED_ROLL,
     LEXEME_TYPE_DATAVIEW,
     LEXEME_TYPE_DICE,
@@ -158,7 +158,7 @@ class APIInstance implements APIInterface {
         }
 
         let alias: string | undefined = undefined;
-        alias = extractFinalLexemeIfTypeMatches(topLevelLexemes, LEXEME_TYPE_ALIAS);
+        alias = extractFinalLexemeIfTypeMatches(topLevelLexemes, LEXEME_TYPE_ROLL_ALIAS);
 
         let resultSeparator: string | undefined = undefined;
         resultSeparator = extractFinalLexemeIfTypeMatches(topLevelLexemes, LEXEME_TYPE_RESULT_SEPARATOR);
