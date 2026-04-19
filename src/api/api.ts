@@ -307,7 +307,7 @@ class APIInstance implements APIInterface {
             subRollers.push(roller);
         }
 
-        return new ChainRoller(this.data, raw, subRollers, this.app, options.position);
+        return new ChainRoller(this.data, raw, subRollers, this.app, options.position, resultSeparator);
     }
 
     getRoller(
